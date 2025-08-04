@@ -40,7 +40,7 @@ const soundConfig = {
 // 应用状态
 const defaultState = {
     isPlaying: false,
-    currentSound: null,
+    playingSounds: new Set(), // 改为Set来支持多音效播放
     volume: 70,
     timerActive: false,
     timerDuration: 0,
@@ -75,6 +75,14 @@ async function initApp() {
         // 绑定事件监听器
         bindEventListeners();
         console.log('事件监听器绑定完成');
+        
+        // 初始化涟漪效果
+        initializeRippleEffects();
+        console.log('涟漪效果初始化完成');
+        
+        // 初始化背景轮播
+        initBackgroundSlideshow();
+        console.log('背景轮播初始化完成');
         
         // 加载音频文件（允许失败）
         try {
@@ -112,7 +120,9 @@ function initAppState() {
         try {
             const settings = JSON.parse(savedSettings);
             appState.volume = settings.volume || defaultState.volume;
-            appState.currentSound = settings.lastSound || null;
+            if (settings.playingSounds && Array.isArray(settings.playingSounds)) {
+                appState.playingSounds = new Set(settings.playingSounds);
+            }
         } catch (error) {
             console.warn('恢复用户设置失败:', error);
         }
@@ -127,8 +137,6 @@ function initDOMElements() {
     elements.soundSelector = document.getElementById('sound-selector');
     elements.soundButtons = document.querySelectorAll('.sound-btn');
     elements.settingsBtn = document.getElementById('settings-btn');
-    elements.settingsPanel = document.getElementById('settings-panel');
-    elements.closeSettings = document.getElementById('close-settings');
     elements.volumeSlider = document.getElementById('volume-slider');
     elements.volumeDisplay = document.getElementById('volume-display');
     elements.timerButtons = document.querySelectorAll('.timer-btn');
@@ -174,15 +182,10 @@ function bindEventListeners() {
     // 播放/暂停按钮
     elements.playPauseBtn.addEventListener('click', handlePlayPauseClick);
     
-    // 音效选择按钮
+    // 音效选择按钮（现在支持多音效叠加）
     elements.soundButtons.forEach(button => {
         button.addEventListener('click', handleSoundButtonClick);
     });
-    
-    // 设置面板控制
-    elements.settingsBtn.addEventListener('click', toggleSettingsPanel);
-    elements.closeSettings.addEventListener('click', hideSettingsPanel);
-    elements.settingsPanel.addEventListener('click', handleSettingsPanelClick);
     
     // 音量控制
     elements.volumeSlider.addEventListener('input', handleVolumeChange);
@@ -279,7 +282,7 @@ function restoreUserSettings() {
 function saveUserSettings() {
     const settings = {
         volume: appState.volume,
-        lastSound: appState.currentSound
+        playingSounds: Array.from(appState.playingSounds)
     };
     
     try {
@@ -340,7 +343,76 @@ function updateVolumeDisplay(volume) {
     if (elements.volumeDisplay) {
         elements.volumeDisplay.textContent = `${volume}%`;
     }
+    
+    // 更新音量可视化
+    updateVolumeVisualizer(volume);
 }
+
+/**
+ * 更新音量可视化器
+ */
+function updateVolumeVisualizer(volume) {
+    const volumeBars = document.querySelectorAll('.volume-bar');
+    if (!volumeBars.length) return;
+    
+    // 计算应该激活的音量条数量
+    const activeBarCount = Math.ceil((volume / 100) * volumeBars.length);
+    
+    volumeBars.forEach((bar, index) => {
+        if (index < activeBarCount) {
+            bar.classList.add('active');
+            // 添加动画效果
+            bar.classList.add('animate');
+            setTimeout(() => {
+                bar.classList.remove('animate');
+            }, 600);
+        } else {
+            bar.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * 启动音量可视化动画
+ */
+function startVolumeAnimation() {
+    const volumeBars = document.querySelectorAll('.volume-bar');
+    if (!volumeBars.length) return;
+    
+    let animationId;
+    
+    function animate() {
+        volumeBars.forEach((bar, index) => {
+            const delay = index * 100;
+            setTimeout(() => {
+                bar.classList.add('animate');
+                setTimeout(() => {
+                    bar.classList.remove('animate');
+                }, 300);
+            }, delay);
+        });
+        
+        animationId = setTimeout(animate, 1500);
+    }
+    
+    if (appState.isPlaying) {
+        animate();
+    }
+    
+    return animationId;
+}
+
+/**
+ * 停止音量可视化动画
+ */
+function stopVolumeAnimation(animationId) {
+    if (animationId) {
+        clearTimeout(animationId);
+    }
+}
+
+// 音量动画ID
+let volumeAnimationId = null;
 
 /**
  * 更新播放按钮状态
@@ -352,10 +424,17 @@ function updatePlayButtonState() {
         elements.playPauseBtn.textContent = '暂停';
         elements.playPauseBtn.classList.add('playing');
         elements.playPauseBtn.setAttribute('aria-label', '暂停播放');
+        
+        // 启动音量可视化动画
+        volumeAnimationId = startVolumeAnimation();
     } else {
         elements.playPauseBtn.textContent = '播放';
         elements.playPauseBtn.classList.remove('playing');
         elements.playPauseBtn.setAttribute('aria-label', '开始播放');
+        
+        // 停止音量可视化动画
+        stopVolumeAnimation(volumeAnimationId);
+        volumeAnimationId = null;
     }
 }
 
@@ -365,10 +444,12 @@ function updatePlayButtonState() {
 function updateSoundButtonsState() {
     elements.soundButtons.forEach(button => {
         const soundName = button.dataset.sound;
-        if (soundName === appState.currentSound && appState.isPlaying) {
+        if (appState.playingSounds.has(soundName)) {
             button.classList.add('active');
+            button.classList.add('playing');
         } else {
             button.classList.remove('active');
+            button.classList.remove('playing');
         }
     });
 }
@@ -380,10 +461,36 @@ function updateTimerDisplay(status) {
     if (!elements.timerDisplay || !elements.timerStatus) return;
     
     if (status.isActive) {
-        elements.timerDisplay.textContent = `剩余时间: ${status.remainingTimeFormatted}`;
+        elements.timerDisplay.textContent = status.remainingTimeFormatted;
         elements.timerStatus.style.display = 'block';
+        
+        // 更新圆形进度条
+        updateTimerProgress(status.progress || 0);
     } else {
         elements.timerStatus.style.display = 'none';
+    }
+}
+
+/**
+ * 更新定时器圆形进度条
+ */
+function updateTimerProgress(progress) {
+    const progressBar = document.querySelector('.timer-progress-bar');
+    if (!progressBar) return;
+    
+    // 计算进度（0-1之间的值）
+    const circumference = 157; // 2 * π * r (r=25, 新的半径)
+    const offset = circumference - (progress * circumference);
+    
+    progressBar.style.strokeDashoffset = offset;
+    
+    // 根据进度改变颜色
+    if (progress > 0.7) {
+        progressBar.style.stroke = 'rgba(56, 161, 105, 0.8)'; // 绿色
+    } else if (progress > 0.3) {
+        progressBar.style.stroke = 'rgba(214, 158, 46, 0.8)'; // 黄色
+    } else {
+        progressBar.style.stroke = 'rgba(229, 62, 62, 0.8)'; // 红色
     }
 }
 
@@ -405,6 +512,10 @@ window.addEventListener('beforeunload', () => {
     if (timerManager) {
         timerManager.destroy();
     }
+    
+    if (backgroundSlideshow) {
+        backgroundSlideshow.destroy();
+    }
 });
 
 // ==================== 事件处理函数 ====================
@@ -419,6 +530,9 @@ async function handlePlayPauseClick() {
             audioManager.stopAllSounds();
             appState.isPlaying = false;
             appState.currentSound = null;
+            
+            // 重置背景主题
+            resetBackgroundTheme();
         } else {
             // 开始播放
             const soundToPlay = appState.currentSound || 'rain'; // 默认播放雨声
@@ -431,6 +545,10 @@ async function handlePlayPauseClick() {
             if (await audioManager.playSound(soundToPlay, appState.volume / 100)) {
                 appState.isPlaying = true;
                 appState.currentSound = soundToPlay;
+                
+                // 切换背景主题
+                switchBackgroundTheme(soundToPlay);
+                
                 console.log('播放成功');
             } else {
                 console.error('播放失败');
@@ -443,6 +561,9 @@ async function handlePlayPauseClick() {
         updateSoundButtonsState();
         saveUserSettings();
         
+        // 添加涟漪效果
+        addRippleEffect(elements.playPauseBtn);
+        
     } catch (error) {
         console.error('播放/暂停操作失败:', error);
         showErrorMessage('操作失败，请重试');
@@ -450,7 +571,65 @@ async function handlePlayPauseClick() {
 }
 
 /**
- * 处理音效按钮点击
+ * 处理播放/暂停按钮点击
+ */
+async function handlePlayPauseClick() {
+    try {
+        if (appState.isPlaying) {
+            // 暂停所有播放
+            audioManager.stopAllSounds();
+            appState.isPlaying = false;
+            appState.playingSounds.clear();
+            
+            // 重置背景主题
+            resetBackgroundTheme();
+        } else {
+            // 如果没有选中的音效，默认播放雨声
+            if (appState.playingSounds.size === 0) {
+                const defaultSound = 'rain';
+                if (await audioManager.playSound(defaultSound, appState.volume / 100)) {
+                    appState.isPlaying = true;
+                    appState.playingSounds.add(defaultSound);
+                    switchBackgroundTheme(defaultSound);
+                } else {
+                    showErrorMessage('播放失败，请检查音频文件是否正常');
+                    return;
+                }
+            } else {
+                // 恢复播放所有选中的音效
+                let hasSuccess = false;
+                for (const soundName of appState.playingSounds) {
+                    if (await audioManager.playSound(soundName, appState.volume / 100)) {
+                        hasSuccess = true;
+                    }
+                }
+                if (hasSuccess) {
+                    appState.isPlaying = true;
+                    // 使用第一个音效的主题
+                    const firstSound = Array.from(appState.playingSounds)[0];
+                    switchBackgroundTheme(firstSound);
+                } else {
+                    showErrorMessage('播放失败，请重试');
+                    return;
+                }
+            }
+        }
+        
+        updatePlayButtonState();
+        updateSoundButtonsState();
+        saveUserSettings();
+        
+        // 添加涟漪效果
+        addRippleEffect(elements.playPauseBtn);
+        
+    } catch (error) {
+        console.error('播放/暂停操作失败:', error);
+        showErrorMessage('操作失败，请重试');
+    }
+}
+
+/**
+ * 处理音效按钮点击（支持多音效叠加）
  */
 async function handleSoundButtonClick(event) {
     try {
@@ -461,22 +640,42 @@ async function handleSoundButtonClick(event) {
             return;
         }
         
-        // 停止当前播放的音效
-        if (appState.currentSound) {
-            audioManager.stopSound(appState.currentSound);
+        // 如果点击的音效正在播放，则停止它
+        if (appState.playingSounds.has(soundName)) {
+            audioManager.stopSound(soundName);
+            appState.playingSounds.delete(soundName);
+            
+            // 如果没有音效在播放了，更新播放状态
+            if (appState.playingSounds.size === 0) {
+                appState.isPlaying = false;
+                resetBackgroundTheme();
+            } else {
+                // 使用剩余音效中的第一个作为背景主题
+                const firstSound = Array.from(appState.playingSounds)[0];
+                switchBackgroundTheme(firstSound);
+            }
+        } else {
+            // 添加新的音效到播放列表
+            if (await audioManager.playSound(soundName, appState.volume / 100)) {
+                appState.isPlaying = true;
+                appState.playingSounds.add(soundName);
+                
+                // 使用第一个音效的主题（如果这是第一个音效）
+                if (appState.playingSounds.size === 1) {
+                    switchBackgroundTheme(soundName);
+                }
+            } else {
+                showErrorMessage('播放失败，请重试');
+                return;
+            }
         }
         
-        // 播放新音效
-        if (await audioManager.playSound(soundName, appState.volume / 100)) {
-            appState.isPlaying = true;
-            appState.currentSound = soundName;
-            
-            updatePlayButtonState();
-            updateSoundButtonsState();
-            saveUserSettings();
-        } else {
-            showErrorMessage('播放失败，请重试');
-        }
+        updatePlayButtonState();
+        updateSoundButtonsState();
+        saveUserSettings();
+        
+        // 添加涟漪效果
+        addRippleEffect(event.currentTarget);
         
     } catch (error) {
         console.error('音效切换失败:', error);
@@ -656,9 +855,12 @@ function handleTimerExpired() {
         
         // 更新应用状态
         appState.isPlaying = false;
-        appState.currentSound = null;
+        appState.playingSounds.clear();
         appState.timerActive = false;
         appState.timerDuration = 0;
+        
+        // 重置背景主题
+        resetBackgroundTheme();
         
         // 更新UI
         updatePlayButtonState();
@@ -707,25 +909,6 @@ function handleKeyboardShortcuts(event) {
     }
     
     switch (event.key.toLowerCase()) {
-        case ' ':
-        case 'spacebar':
-            event.preventDefault();
-            handlePlayPauseClick();
-            break;
-            
-        case 'escape':
-            if (appState.settingsPanelVisible) {
-                hideSettingsPanel();
-            }
-            break;
-            
-        case 's':
-            if (event.ctrlKey || event.metaKey) {
-                event.preventDefault();
-                toggleSettingsPanel();
-            }
-            break;
-            
         case '1':
         case '2':
         case '3':
@@ -740,6 +923,12 @@ function handleKeyboardShortcuts(event) {
                     button.click();
                 }
             }
+            break;
+            
+        case ' ':
+        case 'spacebar':
+            event.preventDefault();
+            handlePlayPauseClick();
             break;
     }
 }
@@ -758,6 +947,173 @@ function handleVisibilityChange() {
         }
         console.log('页面已显示');
     }
+}
+
+// ==================== 交互效果函数 ====================
+
+/**
+ * 涟漪效果管理器
+ */
+class RippleManager {
+    constructor() {
+        this.activeRipples = new Map();
+    }
+    
+    /**
+     * 创建涟漪效果
+     */
+    createRipple(element, event) {
+        if (!element) return;
+        
+        // 获取点击位置
+        const rect = element.getBoundingClientRect();
+        const x = event ? (event.clientX - rect.left) : (rect.width / 2);
+        const y = event ? (event.clientY - rect.top) : (rect.height / 2);
+        
+        // 创建涟漪元素
+        const ripple = document.createElement('div');
+        ripple.className = 'ripple-effect';
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        
+        // 添加到元素中
+        element.appendChild(ripple);
+        
+        // 触发动画
+        requestAnimationFrame(() => {
+            ripple.classList.add('ripple-animate');
+        });
+        
+        // 清理涟漪
+        setTimeout(() => {
+            if (ripple.parentNode) {
+                ripple.parentNode.removeChild(ripple);
+            }
+        }, 600);
+        
+        return ripple;
+    }
+    
+    /**
+     * 为元素添加涟漪效果监听器
+     */
+    addRippleListener(element) {
+        if (!element) return;
+        
+        element.addEventListener('click', (event) => {
+            this.createRipple(element, event);
+        });
+        
+        // 确保元素有相对定位
+        if (getComputedStyle(element).position === 'static') {
+            element.style.position = 'relative';
+        }
+        
+        // 确保元素有溢出隐藏
+        element.style.overflow = 'hidden';
+    }
+}
+
+// 创建全局涟漪管理器
+const rippleManager = new RippleManager();
+
+/**
+ * 添加涟漪效果（简化接口）
+ */
+function addRippleEffect(element, event = null) {
+    rippleManager.createRipple(element, event);
+}
+
+/**
+ * 初始化所有涟漪效果
+ */
+function initializeRippleEffects() {
+    // 为主播放按钮添加涟漪效果
+    if (elements.playPauseBtn) {
+        rippleManager.addRippleListener(elements.playPauseBtn);
+        elements.playPauseBtn.classList.add('ripple-large');
+    }
+    
+    // 为音效按钮添加涟漪效果
+    elements.soundButtons.forEach(button => {
+        rippleManager.addRippleListener(button);
+    });
+    
+    // 为定时器按钮添加涟漪效果
+    elements.timerButtons.forEach(button => {
+        rippleManager.addRippleListener(button);
+        button.classList.add('ripple-small');
+    });
+    
+    // 为其他按钮添加涟漪效果
+    const otherButtons = [
+        elements.setCustomTimer,
+        elements.cancelTimer,
+        elements.closeError
+    ];
+    
+    otherButtons.forEach(button => {
+        if (button) {
+            rippleManager.addRippleListener(button);
+            button.classList.add('ripple-small');
+        }
+    });
+}
+
+/**
+ * 为元素添加呼吸动画
+ */
+function addBreathingEffect(element) {
+    if (!element) return;
+    
+    element.style.animation = 'breathe 3s ease-in-out infinite';
+}
+
+/**
+ * 移除呼吸动画
+ */
+function removeBreathingEffect(element) {
+    if (!element) return;
+    
+    element.style.animation = '';
+}
+
+// ==================== 主题管理函数 ====================
+
+/**
+ * 切换背景主题
+ */
+function switchBackgroundTheme(soundName) {
+    const backgroundContainer = document.getElementById('background-container');
+    if (!backgroundContainer) return;
+    
+    // 移除所有主题类
+    const themeClasses = ['bg-rain', 'bg-waves', 'bg-fire', 'bg-forest', 'bg-cafe'];
+    themeClasses.forEach(className => {
+        backgroundContainer.classList.remove(className);
+    });
+    
+    // 添加对应的主题类
+    if (soundName && themeClasses.includes(`bg-${soundName}`)) {
+        backgroundContainer.classList.add(`bg-${soundName}`);
+    }
+    
+    console.log(`背景主题已切换到: ${soundName}`);
+}
+
+/**
+ * 重置背景主题到默认状态
+ */
+function resetBackgroundTheme() {
+    const backgroundContainer = document.getElementById('background-container');
+    if (!backgroundContainer) return;
+    
+    const themeClasses = ['bg-rain', 'bg-waves', 'bg-fire', 'bg-forest', 'bg-cafe'];
+    themeClasses.forEach(className => {
+        backgroundContainer.classList.remove(className);
+    });
+    
+    console.log('背景主题已重置到默认状态');
 }
 
 // ==================== 工具函数 ====================
@@ -813,6 +1169,168 @@ function checkBrowserSupport() {
     };
     
     return support;
+}
+
+// ==================== 背景轮播管理 ====================
+
+/**
+ * 背景轮播管理器
+ */
+class BackgroundSlideshow {
+    constructor() {
+        this.container = document.getElementById('background-slideshow');
+        this.slides = [];
+        this.currentIndex = 0;
+        this.intervalId = null;
+        this.duration = 8000; // 8秒切换一次
+        
+        // 检测设备类型
+        this.isMobile = window.innerWidth <= 768;
+        
+        // 预设图片列表（根据实际文件名）
+        this.imageList = this.isMobile ? [
+            'images/phone-1.png', 'images/phone-2.png', 'images/phone-3.png', 
+            'images/phone-4.png', 'images/phone-5.png'
+        ] : [
+            'images/pc-1.png', 'images/pc-2.png', 'images/pc-3.png', 
+            'images/pc-4.png', 'images/pc-5.png'
+        ];
+    }
+    
+    /**
+     * 初始化轮播
+     */
+    async init() {
+        if (!this.container) return;
+        
+        // 创建图片元素
+        this.imageList.forEach((imagePath, index) => {
+            const slide = document.createElement('div');
+            slide.className = 'background-slide';
+            slide.style.backgroundImage = `url('${imagePath}')`;
+            
+            // 第一张图片设为激活状态
+            if (index === 0) {
+                slide.classList.add('active');
+            }
+            
+            this.container.appendChild(slide);
+            this.slides.push(slide);
+        });
+        
+        // 开始轮播
+        this.start();
+        
+        // 监听窗口大小变化
+        window.addEventListener('resize', this.handleResize.bind(this));
+    }
+    
+    /**
+     * 开始轮播
+     */
+    start() {
+        if (this.slides.length <= 1) return;
+        
+        this.intervalId = setInterval(() => {
+            this.nextSlide();
+        }, this.duration);
+    }
+    
+    /**
+     * 停止轮播
+     */
+    stop() {
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+    }
+    
+    /**
+     * 下一张图片
+     */
+    nextSlide() {
+        if (this.slides.length === 0) return;
+        
+        // 隐藏当前图片
+        this.slides[this.currentIndex].classList.remove('active');
+        
+        // 切换到下一张
+        this.currentIndex = (this.currentIndex + 1) % this.slides.length;
+        
+        // 显示新图片
+        this.slides[this.currentIndex].classList.add('active');
+    }
+    
+    /**
+     * 处理窗口大小变化
+     */
+    handleResize() {
+        const wasMobile = this.isMobile;
+        this.isMobile = window.innerWidth <= 768;
+        
+        // 如果设备类型改变，重新加载图片
+        if (wasMobile !== this.isMobile) {
+            this.updateImageList();
+            this.reloadImages();
+        }
+    }
+    
+    /**
+     * 更新图片列表
+     */
+    updateImageList() {
+        this.imageList = this.isMobile ? [
+            'images/phone-1.png', 'images/phone-2.png', 'images/phone-3.png', 
+            'images/phone-4.png', 'images/phone-5.png'
+        ] : [
+            'images/pc-1.png', 'images/pc-2.png', 'images/pc-3.png', 
+            'images/pc-4.png', 'images/pc-5.png'
+        ];
+    }
+    
+    /**
+     * 重新加载图片
+     */
+    reloadImages() {
+        // 清除现有slides
+        this.slides.forEach(slide => slide.remove());
+        this.slides = [];
+        this.currentIndex = 0;
+        
+        // 重新创建slides
+        this.imageList.forEach((imagePath, index) => {
+            const slide = document.createElement('div');
+            slide.className = 'background-slide';
+            slide.style.backgroundImage = `url('${imagePath}')`;
+            
+            if (index === 0) {
+                slide.classList.add('active');
+            }
+            
+            this.container.appendChild(slide);
+            this.slides.push(slide);
+        });
+    }
+    
+    /**
+     * 销毁轮播
+     */
+    destroy() {
+        this.stop();
+        window.removeEventListener('resize', this.handleResize.bind(this));
+    }
+}
+
+// 全局背景轮播实例
+let backgroundSlideshow = null;
+
+/**
+ * 初始化背景轮播
+ */
+function initBackgroundSlideshow() {
+    backgroundSlideshow = new BackgroundSlideshow();
+    backgroundSlideshow.init();
 }
 
 // 导出全局函数（用于调试）

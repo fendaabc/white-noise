@@ -10,10 +10,34 @@
 </head>
 <body>
     <!-- 全屏背景容器 -->
-    <div id="background-container"></div>
+    <div id="background-container">
+        <!-- 背景图片轮播 -->
+        <div id="background-slideshow" class="background-slideshow">
+            <!-- 图片将通过JavaScript动态加载 -->
+        </div>
+        
+        <!-- 背景渐变覆盖层 -->
+        <div class="background-overlay"></div>
+        
+        <!-- 微妙粒子效果 -->
+        <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+    </div>
     
     <!-- 主内容容器 -->
     <main class="main-container">
+        <!-- 页面标题 -->
+        <h1 class="app-title">白噪音</h1>
+        
         <!-- 主播放按钮 -->
         <button id="play-pause-btn" class="play-button" aria-label="播放/暂停">
             播放
@@ -24,46 +48,54 @@
             <button class="sound-btn" data-sound="rain" aria-label="雨声">
                 <span class="sound-icon">🌧️</span>
                 <span class="sound-name">雨声</span>
+                <div class="play-indicator">▶</div>
             </button>
             <button class="sound-btn" data-sound="waves" aria-label="海浪声">
                 <span class="sound-icon">🌊</span>
                 <span class="sound-name">海浪声</span>
+                <div class="play-indicator">▶</div>
             </button>
             <button class="sound-btn" data-sound="fire" aria-label="篝火声">
                 <span class="sound-icon">🔥</span>
                 <span class="sound-name">篝火声</span>
+                <div class="play-indicator">▶</div>
             </button>
             <button class="sound-btn" data-sound="forest" aria-label="森林声">
                 <span class="sound-icon">🌲</span>
                 <span class="sound-name">森林声</span>
+                <div class="play-indicator">▶</div>
             </button>
             <button class="sound-btn" data-sound="cafe" aria-label="咖啡厅">
                 <span class="sound-icon">☕</span>
                 <span class="sound-name">咖啡厅</span>
+                <div class="play-indicator">▶</div>
             </button>
         </div>
         
-        <!-- 设置按钮 -->
-        <button id="settings-btn" class="settings-button" aria-label="打开设置">
-            ⚙️
-        </button>
-    </main>
-    
-    <!-- 设置面板 (默认隐藏) -->
-    <div id="settings-panel" class="settings-panel">
-        <div class="settings-content">
-            <h3>设置</h3>
-            
+        <!-- 控制面板 -->
+        <div class="control-panel">
             <!-- 音量控制 -->
             <div class="volume-control">
                 <label for="volume-slider">音量</label>
-                <input type="range" id="volume-slider" min="0" max="100" value="70" class="volume-slider">
+                <div class="volume-slider-container">
+                    <input type="range" id="volume-slider" min="0" max="100" value="70" class="volume-slider">
+                    <div class="volume-visualizer">
+                        <div class="volume-bar"></div>
+                        <div class="volume-bar"></div>
+                        <div class="volume-bar"></div>
+                        <div class="volume-bar"></div>
+                        <div class="volume-bar"></div>
+                        <div class="volume-bar"></div>
+                        <div class="volume-bar"></div>
+                        <div class="volume-bar"></div>
+                    </div>
+                </div>
                 <span id="volume-display">70%</span>
             </div>
             
-            <!-- 定时器设置 -->
-            <div id="timer-options" class="timer-options">
-                <h4>定时器</h4>
+            <!-- 定时器控制 -->
+            <div class="timer-control">
+                <label>定时器</label>
                 <div class="timer-buttons">
                     <button class="timer-btn" data-minutes="15">15分</button>
                     <button class="timer-btn" data-minutes="30">30分</button>
@@ -79,15 +111,23 @@
                 
                 <!-- 定时器状态显示 -->
                 <div id="timer-status" class="timer-status" style="display: none;">
-                    <span id="timer-display">剩余时间: --:--</span>
-                    <button id="cancel-timer">取消定时器</button>
+                    <div class="timer-progress-container">
+                        <svg class="timer-progress-ring" width="60" height="60">
+                            <circle class="timer-progress-bg" cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
+                            <circle class="timer-progress-bar" cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                        <span id="timer-display">--:--</span>
+                    </div>
+                    <button id="cancel-timer">取消</button>
                 </div>
             </div>
-            
-            <!-- 关闭按钮 -->
-            <button id="close-settings" class="close-button" aria-label="关闭设置">×</button>
         </div>
-    </div>
+    </main>
+    
+    <!-- 设置按钮（保留用于未来扩展） -->
+    <button id="settings-btn" class="settings-button" aria-label="设置" style="display: none;">
+        ⚙️
+    </button>
     
     <!-- 加载状态指示器 -->
     <div id="loading-indicator" class="loading-indicator">
