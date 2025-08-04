@@ -1220,6 +1220,9 @@ class BackgroundSlideshow {
             const slide = document.createElement('div');
             slide.className = 'background-slide';
             slide.style.backgroundImage = `url('${imagePath}')`;
+            slide.style.backgroundSize = 'cover';
+            slide.style.backgroundPosition = 'center';
+            slide.style.backgroundRepeat = 'no-repeat';
             
             // 第一张图片设为激活状态
             if (index === 0) {
@@ -1315,6 +1318,9 @@ class BackgroundSlideshow {
             const slide = document.createElement('div');
             slide.className = 'background-slide';
             slide.style.backgroundImage = `url('${imagePath}')`;
+            slide.style.backgroundSize = 'cover';
+            slide.style.backgroundPosition = 'center';
+            slide.style.backgroundRepeat = 'no-repeat';
             
             if (index === 0) {
                 slide.classList.add('active');
