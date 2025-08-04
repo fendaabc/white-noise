@@ -16,6 +16,9 @@
 2. WHEN 背景动画播放 THEN 系统 SHALL 呈现缓慢、有机的色彩流动效果，避免突兀的变化
 3. WHEN 用户停留在页面 THEN 系统 SHALL 保持背景的微妙变化，营造生动但不分散注意力的环境
 4. WHEN 不同音效被选择 THEN 系统 SHALL 根据音效类型微调背景色调（雨声-蓝色，森林-绿色等）
+5. WHEN 用户访问网站 THEN 系统 SHALL 根据设备类型自动选择合适的背景图片（PC端使用pc-*.png，移动端使用phone-*.png）
+6. WHEN 背景图片显示 THEN 系统 SHALL 以半透明方式叠加在渐变背景之上，保持毛玻璃效果的视觉层次
+7. WHEN 用户长时间停留 THEN 系统 SHALL 自动轮播不同的背景图片，营造动态变化的视觉体验
 
 ### Requirement 2
 

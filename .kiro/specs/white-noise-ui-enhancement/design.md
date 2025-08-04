@@ -390,7 +390,172 @@ graph TB
 }
 ```
 
+### 5. 响应式背景图片系统
+
+#### 背景图片轮播设计
+```css
+/* 背景图片轮播系统 */
+.background-slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.background-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity var(--duration-slowest) var(--ease-gentle);
+    filter: blur(1px); /* 轻微模糊增强沉浸感 */
+}
+
+.background-slide.active {
+    opacity: 0.25; /* 让背景图片半透明，保持毛玻璃效果 */
+}
+
+/* 响应式背景图片选择 */
+@media (max-width: 768px) {
+    .background-slide {
+        /* 移动端使用phone-*.png图片 */
+        filter: blur(0.5px); /* 移动端减少模糊 */
+    }
+}
+
+@media (min-width: 769px) {
+    .background-slide {
+        /* 桌面端使用pc-*.png图片 */
+        filter: blur(1px);
+    }
+}
+```
+
+#### 背景图片管理逻辑
+```javascript
+class BackgroundSlideshow {
+    constructor() {
+        this.container = document.getElementById('background-slideshow');
+        this.currentIndex = 0;
+        this.images = [];
+        this.slideInterval = null;
+        this.transitionDuration = 8000; // 8秒切换间隔
+        this.isMobile = window.innerWidth <= 768;
+    }
+    
+    init() {
+        this.loadImages();
+        this.createSlides();
+        this.startSlideshow();
+        this.bindResizeListener();
+    }
+    
+    loadImages() {
+        const prefix = this.isMobile ? 'phone' : 'pc';
+        this.images = [];
+        for (let i = 1; i <= 5; i++) {
+            this.images.push(`images/${prefix}-${i}.png`);
+        }
+    }
+    
+    createSlides() {
+        this.container.innerHTML = '';
+        this.images.forEach((imagePath, index) => {
+            const slide = document.createElement('div');
+            slide.className = 'background-slide';
+            slide.style.backgroundImage = `url(${imagePath})`;
+            if (index === 0) slide.classList.add('active');
+            this.container.appendChild(slide);
+        });
+    }
+    
+    nextSlide() {
+        const slides = this.container.querySelectorAll('.background-slide');
+        slides[this.currentIndex].classList.remove('active');
+        this.currentIndex = (this.currentIndex + 1) % slides.length;
+        slides[this.currentIndex].classList.add('active');
+    }
+    
+    startSlideshow() {
+        this.slideInterval = setInterval(() => {
+            this.nextSlide();
+        }, this.transitionDuration);
+    }
+    
+    stopSlideshow() {
+        if (this.slideInterval) {
+            clearInterval(this.slideInterval);
+            this.slideInterval = null;
+        }
+    }
+    
+    handleResize() {
+        const wasMobile = this.isMobile;
+        this.isMobile = window.innerWidth <= 768;
+        
+        if (wasMobile !== this.isMobile) {
+            this.stopSlideshow();
+            this.loadImages();
+            this.createSlides();
+            this.startSlideshow();
+        }
+    }
+    
+    bindResizeListener() {
+        window.addEventListener('resize', debounce(() => {
+            this.handleResize();
+        }, 300));
+    }
+    
+    destroy() {
+        this.stopSlideshow();
+        window.removeEventListener('resize', this.handleResize);
+    }
+}
+```
+
 ## Data Models
+
+### 背景图片配置模型
+```javascript
+const backgroundConfig = {
+    images: {
+        pc: [
+            'images/pc-1.png',
+            'images/pc-2.png',
+            'images/pc-3.png',
+            'images/pc-4.png',
+            'images/pc-5.png'
+        ],
+        mobile: [
+            'images/phone-1.png',
+            'images/phone-2.png',
+            'images/phone-3.png',
+            'images/phone-4.png',
+            'images/phone-5.png'
+        ]
+    },
+    slideshow: {
+        interval: 8000, // 8秒切换间隔
+        transitionDuration: 1200, // 1.2秒过渡时间
+        opacity: 0.25, // 背景图片透明度
+        blur: {
+            desktop: 1, // 桌面端模糊程度
+            mobile: 0.5 // 移动端模糊程度
+        }
+    },
+    responsive: {
+        breakpoint: 768 // 响应式断点
+    }
+};
+```
 
 ### 主题配置模型
 ```javascript
