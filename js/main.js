@@ -928,7 +928,19 @@ function handleKeyboardShortcuts(event) {
         case ' ':
         case 'spacebar':
             event.preventDefault();
-            handlePlayPauseClick();
+            // 如果有正在播放的音效，暂停它；否则播放第一个音效
+            if (appState.isPlaying && appState.currentSound) {
+                const currentButton = document.querySelector(`[data-sound="${appState.currentSound}"]`);
+                if (currentButton) {
+                    currentButton.click();
+                }
+            } else {
+                // 播放第一个音效（雨声）
+                const firstButton = document.querySelector('[data-sound="rain"]');
+                if (firstButton) {
+                    firstButton.click();
+                }
+            }
             break;
     }
 }
