@@ -1718,8 +1718,7 @@ html, body {
         border: 2px solid var(--text-color);
     }
 }
-/
-* ===== 骨架屏系统样式 ===== */
+/* ===== 骨架屏系统样式 ===== */
 
 /* 骨架屏容器 */
 .skeleton-container {
@@ -2548,8 +2547,11 @@ html, body {
     .loading-status.loading-pulse {
         animation: none;
     }
-}/
-* ===== 音效按钮加载状态样式 ===== */
+}
+
+/* 
+===== 音效按钮加载状态样式 ===== 
+*/
 
 /* 加载中状态 */
 .sound-btn.loading {
