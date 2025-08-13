@@ -201,9 +201,36 @@ function initDOMElements() {
  * 初始化管理器
  */
 async function initManagers() {
-  // 初始化AudioManager（暂时使用原始版本）
-  audioManager = new AudioManager();
+  // 初始化 LazyAudioManager 并完成必要绑定
+  audioManager = new LazyAudioManager();
+
+  // 将音频配置传入懒加载管理器，便于按需加载时获取配置
+  if (typeof audioManager.setSoundConfigs === 'function') {
+    audioManager.setSoundConfigs(soundConfig);
+  }
+
+  // 注入错误恢复管理器（若存在），便于在加载失败时走统一重试/降级
+  if (errorRecoveryManager && typeof audioManager.setErrorRecoveryManager === 'function') {
+    audioManager.setErrorRecoveryManager(errorRecoveryManager);
+  }
+
+  // 设置加载相关的回调（仅后台日志，不显示UI）
+  if (typeof audioManager.setCallbacks === 'function') {
+    audioManager.setCallbacks({
+      onLoadingStateChange: handleAudioLoadingStateChange,
+      onLoadingProgress: handleAudioLoadingProgress,
+      onLoadingError: handleAudioLoadingError,
+    });
+  }
+
   await audioManager.init();
+
+  // 供 ErrorRecoveryManager 等全局模块访问（其使用 window.audioManager）
+  try {
+    window.audioManager = audioManager;
+  } catch (e) {
+    console.warn('无法挂载 window.audioManager:', e);
+  }
 
   // 初始化TimerManager
   timerManager = new TimerManager();
@@ -425,9 +452,20 @@ async function loadAudioFiles() {
  */
 async function ensureSoundLoaded(name) {
   try {
-    if (!audioManager || !audioManager.isInitialized) return;
-    if (!audioManager.isLoaded(name) && soundConfig[name]) {
-      await audioManager.loadSounds({ [name]: soundConfig[name] });
+    if (!audioManager) return;
+    if (audioManager.isLoaded && audioManager.isLoaded(name)) return;
+
+    const cfg = soundConfig ? soundConfig[name] : null;
+
+    // 优先使用懒加载接口（如果可用）
+    if (typeof audioManager.loadSoundLazy === 'function') {
+      await audioManager.loadSoundLazy(name, cfg || null);
+      return;
+    }
+
+    // 回退到批量加载接口
+    if (typeof audioManager.loadSounds === 'function' && cfg) {
+      await audioManager.loadSounds({ [name]: cfg });
     }
   } catch (error) {
     console.error(`按需加载音效失败: ${name}`, error);
