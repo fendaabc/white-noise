@@ -47,6 +47,16 @@ const soundConfig = {
     name: "咖啡厅",
     icon: "☕",
   },
+  "white-noise": {
+    path: "audio/white-noise.mp3",
+    name: "白噪音",
+    icon: "🎧",
+  },
+  wind: {
+    path: "audio/wind.mp3",
+    name: "风声",
+    icon: "💨",
+  },
 };
 
 // 应用状态
@@ -1408,6 +1418,8 @@ function switchBackgroundTheme(soundName) {
     "bg-fire",
     "bg-forest",
     "bg-cafe",
+    "bg-white-noise",
+    "bg-wind",
   ];
   themeClasses.forEach((className) => {
     backgroundContainer.classList.remove(className);
@@ -1434,6 +1446,8 @@ function resetBackgroundTheme() {
     "bg-fire",
     "bg-forest",
     "bg-cafe",
+    "bg-white-noise",
+    "bg-wind",
   ];
   themeClasses.forEach((className) => {
     backgroundContainer.classList.remove(className);
