@@ -430,7 +430,7 @@ class SkeletonManager {
                 {
                     id: 'sound-buttons-skeleton',
                     type: 'grid',
-                    items: 5,
+                    items: 7,
                     itemWidth: '140px',
                     itemHeight: '100px',
                     animation: 'shimmer-delayed',
