@@ -398,7 +398,24 @@ class ErrorRecoveryManager {
                 return { success: result };
                 
             } else if (context.operation === 'play' && context.audioName && window.audioManager) {
-                // 重新播放音频
+                // 重新播放音频（先确保按需加载）
+                try {
+                    const name = context.audioName;
+                    const manager = window.audioManager;
+                    const config = manager.getSoundConfig ? manager.getSoundConfig(name) : (context.audioConfig || null);
+
+                    if (manager.isLoaded && !manager.isLoaded(name) && config) {
+                        if (typeof manager.loadSoundLazy === 'function') {
+                            await manager.loadSoundLazy(name, config);
+                        } else if (typeof manager.loadSounds === 'function') {
+                            const path = typeof config === 'string' ? config : config.path;
+                            await manager.loadSounds({ [name]: path });
+                        }
+                    }
+                } catch (e) {
+                    console.warn('重试播放前按需加载失败，继续尝试播放:', e);
+                }
+
                 const result = await window.audioManager.playSound(context.audioName, context.volume);
                 return { success: result };
             }

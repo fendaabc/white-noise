@@ -419,6 +419,21 @@ async function loadAudioFiles() {
 }
 
 /**
+ * 确保指定音效已加载（按需加载）
+ * @param {string} name - 音效名称
+ */
+async function ensureSoundLoaded(name) {
+  try {
+    if (!audioManager || !audioManager.isInitialized) return;
+    if (!audioManager.isLoaded(name) && soundConfig[name]) {
+      await audioManager.loadSounds({ [name]: soundConfig[name] });
+    }
+  } catch (error) {
+    console.error(`按需加载音效失败: ${name}`, error);
+  }
+}
+
+/**
  * 恢复用户设置
  */
 function restoreUserSettings() {
@@ -813,6 +828,7 @@ async function handlePlayPauseClick() {
       // 如果没有选中的音效，默认播放雨声
       if (appState.playingSounds.size === 0) {
         const defaultSound = "rain";
+        await ensureSoundLoaded(defaultSound);
         if (await audioManager.playSound(defaultSound, appState.volume / 100)) {
           appState.isPlaying = true;
           appState.playingSounds.add(defaultSound);
@@ -825,6 +841,8 @@ async function handlePlayPauseClick() {
         // 恢复播放所有选中的音效
         let hasSuccess = false;
         for (const soundName of appState.playingSounds) {
+          // 确保每个音效已加载（按需加载）
+          await ensureSoundLoaded(soundName);
           if (await audioManager.playSound(soundName, appState.volume / 100)) {
             hasSuccess = true;
           }
@@ -865,10 +883,8 @@ async function handleSoundButtonClick(event) {
       return;
     }
 
-    // 检查音频是否已加载
-    if (!audioManager.isLoaded(soundName)) {
-      console.log(`音效 ${soundName} 未加载，尝试播放可能失败`);
-    }
+    // 确保音频已加载（按需加载）
+    await ensureSoundLoaded(soundName);
 
     // 如果点击的音效正在播放，则停止它
     if (appState.playingSounds.has(soundName)) {
