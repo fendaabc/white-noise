@@ -9,6 +9,13 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- 骨架屏容器 -->
+    <div id="skeleton-container" class="skeleton-container">
+        <!-- 骨架屏内容将通过JavaScript动态生成 -->
+    </div>
+    
+
+    
     <!-- 全屏背景容器 -->
     <div id="background-container">
         <!-- 背景图片轮播 -->
@@ -129,11 +136,7 @@
         ⚙️
     </button>
     
-    <!-- 加载状态指示器 -->
-    <div id="loading-indicator" class="loading-indicator">
-        <div class="loading-spinner"></div>
-        <p>正在加载音频文件...</p>
-    </div>
+    <!-- 旧的加载指示器已移除，现在使用骨架屏系统 -->
     
     <!-- 错误提示 -->
     <div id="error-message" class="error-message" style="display: none;">
@@ -142,7 +145,11 @@
     </div>
     
     <!-- JavaScript 模块 -->
+    <script src="js/SkeletonManager.js"></script>
+    <script src="js/ErrorRecoveryManager.js"></script>
+    <script src="js/LoadingOrchestrator.js"></script>
     <script src="js/AudioManager.js"></script>
+    <script src="js/LazyAudioManager.js"></script>
     <script src="js/TimerManager.js"></script>
     <script src="js/main.js"></script>
 </body>

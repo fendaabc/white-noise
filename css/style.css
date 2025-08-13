@@ -1695,3 +1695,982 @@ html, body {
         border: 2px solid var(--text-color);
     }
 }
+/
+* ===== 骨架屏系统样式 ===== */
+
+/* 骨架屏容器 */
+.skeleton-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background: var(--bg-gradient-flow);
+    background-size: 400% 400%;
+    animation: backgroundFlow 25s var(--ease-natural) infinite;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-natural);
+}
+
+.skeleton-container.skeleton-visible {
+    opacity: 1;
+}
+
+.skeleton-container.skeleton-hiding {
+    opacity: 0;
+}
+
+/* 骨架屏主容器 */
+.skeleton-main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2xl);
+    padding: var(--space-2xl);
+    width: 100%;
+    max-width: 800px;
+}
+
+/* 骨架屏基础元素样式 */
+.skeleton-element {
+    background: var(--glass-light);
+    border-radius: var(--radius-lg);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--glass-border-light);
+}
+
+/* 骨架屏文本元素 */
+.skeleton-text {
+    background: linear-gradient(90deg, 
+        var(--glass-light) 25%, 
+        var(--glass-medium) 50%, 
+        var(--glass-light) 75%);
+    background-size: 200% 100%;
+    position: relative;
+}
+
+/* 骨架屏标题 */
+.skeleton-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.skeleton-title-decoration {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: var(--glass-medium);
+    border-radius: var(--radius-sm);
+    opacity: 0.5;
+}
+
+/* 控制面板骨架屏 */
+.skeleton-controls {
+    display: flex;
+    gap: var(--space-4xl);
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+    background: transparent;
+    border: none;
+}
+
+.skeleton-volume-section,
+.skeleton-timer-section {
+    flex: 1;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.skeleton-volume-label,
+.skeleton-timer-label {
+    width: 60px;
+    height: 16px;
+    background: var(--glass-medium);
+    border-radius: var(--radius-sm);
+}
+
+.skeleton-volume-slider {
+    width: 100%;
+    height: 8px;
+    background: var(--glass-light);
+    border-radius: var(--radius-sm);
+    position: relative;
+}
+
+.skeleton-volume-slider::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 70%;
+    height: 100%;
+    background: var(--glass-medium);
+    border-radius: var(--radius-sm);
+}
+
+.skeleton-timer-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+}
+
+.skeleton-timer-button {
+    width: 100%;
+    height: 32px;
+    background: var(--glass-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border-light);
+}
+
+/* 骨架屏圆形元素 */
+.skeleton-circle {
+    border-radius: var(--radius-full);
+    background: var(--glass-medium);
+    border: 2px solid var(--glass-border-medium);
+    box-shadow: var(--shadow-float);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 播放图标占位符 */
+.skeleton-play-icon {
+    width: 24px;
+    height: 24px;
+    background: var(--glass-heavy);
+    border-radius: 0;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    opacity: 0.6;
+}
+
+/* 骨架屏光环效果 */
+.skeleton-halo {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    border: 2px solid var(--glass-border-light);
+    border-radius: var(--radius-full);
+    opacity: 0;
+    animation: skeletonHalo 3s ease-in-out infinite;
+}
+
+@keyframes skeletonHalo {
+    0%, 100% {
+        opacity: 0;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.3;
+        transform: scale(1.1);
+    }
+}
+
+/* 骨架屏网格容器 */
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-xl);
+    width: 100%;
+    max-width: 600px;
+    background: transparent;
+    border: none;
+}
+
+/* 骨架屏网格项 */
+.skeleton-grid-item {
+    background: var(--glass-light);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border-light);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    gap: var(--space-md);
+}
+
+/* 音效图标占位符 */
+.skeleton-sound-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--glass-medium);
+    flex-shrink: 0;
+}
+
+/* 音效名称占位符 */
+.skeleton-sound-name {
+    width: 60px;
+    height: 14px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-medium);
+}
+
+/* ===== 骨架屏动画效果 ===== */
+
+/* 增强微光动画 */
+@keyframes skeletonShimmer {
+    0% {
+        background-position: -200% 0;
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        background-position: 200% 0;
+        opacity: 0.6;
+    }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg, 
+        var(--glass-light) 0%, 
+        var(--glass-light) 25%, 
+        var(--glass-heavy) 50%, 
+        var(--glass-light) 75%, 
+        var(--glass-light) 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 2s ease-in-out infinite;
+    position: relative;
+}
+
+/* 微光高光效果 */
+.skeleton-shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.1) 50%, 
+        transparent 100%);
+    animation: skeletonHighlight 2s ease-in-out infinite;
+}
+
+@keyframes skeletonHighlight {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* 增强脉动动画 */
+@keyframes skeletonPulse {
+    0%, 100% {
+        opacity: 0.7;
+        transform: scale(1);
+        box-shadow: var(--shadow-float);
+    }
+    25% {
+        opacity: 0.8;
+        transform: scale(1.01);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.03);
+        box-shadow: var(--shadow-elevated), 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+    75% {
+        opacity: 0.8;
+        transform: scale(1.01);
+    }
+}
+
+.skeleton-pulse {
+    animation: skeletonPulse 3s ease-in-out infinite;
+}
+
+/* 播放按钮特殊脉动效果 */
+.skeleton-circle.skeleton-pulse .skeleton-play-icon {
+    animation: skeletonPlayIconPulse 3s ease-in-out infinite;
+}
+
+@keyframes skeletonPlayIconPulse {
+    0%, 100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.1);
+    }
+}
+
+/* 延迟微光动画（用于网格项） */
+.skeleton-shimmer-delayed .skeleton-grid-item {
+    background: linear-gradient(90deg, 
+        var(--glass-light) 25%, 
+        var(--glass-medium) 50%, 
+        var(--glass-light) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+/* 骨架屏激活状态 */
+.skeleton-animated {
+    animation-play-state: running;
+}
+
+/* 骨架屏暂停状态 */
+.skeleton-element:not(.skeleton-animated) {
+    animation-play-state: paused;
+}
+
+/* ===== 骨架屏变形过渡动画 ===== */
+
+/* 变形容器 */
+.skeleton-morphing {
+    transition: all var(--duration-normal) var(--ease-natural);
+}
+
+/* 变形出场动画 */
+.skeleton-morph-out {
+    animation: skeletonMorphOut var(--duration-normal) var(--ease-natural) forwards;
+}
+
+@keyframes skeletonMorphOut {
+    0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.02) translateY(-2px);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.98) translateY(4px);
+    }
+}
+
+/* 入场动画增强 */
+.skeleton-element {
+    animation: skeletonFadeIn var(--duration-slow) var(--ease-gentle) both;
+}
+
+@keyframes skeletonFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 特殊元素的入场动画 */
+.skeleton-circle {
+    animation: skeletonCircleFadeIn var(--duration-slow) var(--ease-back) both;
+}
+
+@keyframes skeletonCircleFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) rotate(-10deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.skeleton-grid-item {
+    animation: skeletonItemFadeIn var(--duration-normal) var(--ease-gentle) both;
+}
+
+@keyframes skeletonItemFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(15px) scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ===== 骨架屏响应式设计 ===== */
+
+/* 移动设备适配 */
+@media (max-width: 768px) {
+    .skeleton-main-container {
+        padding: var(--space-lg);
+        gap: var(--space-xl);
+    }
+    
+    .skeleton-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-md);
+    }
+    
+    #play-button-skeleton {
+        width: 100px !important;
+        height: 100px !important;
+    }
+    
+    .skeleton-grid-item {
+        width: 80px !important;
+        height: 100px !important;
+    }
+}
+
+/* 小屏设备适配 */
+@media (max-width: 480px) {
+    .skeleton-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    #title-skeleton {
+        width: 150px !important;
+        height: 28px !important;
+    }
+}
+
+/* 减少动画偏好适配 */
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer,
+    .skeleton-pulse,
+    .skeleton-shimmer-delayed .skeleton-grid-item {
+        animation: none;
+    }
+    
+    .skeleton-element {
+        opacity: 0.7;
+    }
+}
+
+/* 高对比度模式适配 */
+@media (prefers-contrast: high) {
+    .skeleton-element {
+        background: var(--glass-medium);
+        border-color: var(--glass-border-heavy);
+    }
+    
+    .skeleton-circle {
+        background: var(--glass-heavy);
+        border-color: var(--glass-border-heavy);
+    }
+}
+/* ===
+== 骨架屏系统样式 ===== */
+
+/* 骨架屏容器 */
+.skeleton-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background: var(--bg-gradient-flow);
+    background-size: 400% 400%;
+    animation: backgroundFlow 25s var(--ease-natural) infinite;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.skeleton-container.skeleton-visible {
+    opacity: 1;
+}
+
+.skeleton-container.skeleton-hiding {
+    opacity: 0;
+}
+
+/* 骨架屏主容器 */
+.skeleton-main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 2rem;
+    width: 100%;
+    max-width: 800px;
+}
+
+/* 骨架屏基础元素样式 */
+.skeleton-element {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    animation: skeletonPulse 2s ease-in-out infinite;
+}
+
+/* 简单的脉动动画 */
+@keyframes skeletonPulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* 骨架屏文本元素 */
+.skeleton-text {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 骨架屏圆形元素 */
+.skeleton-circle {
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 骨架屏网格容器 */
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 600px;
+    background: transparent;
+    border: none;
+}
+
+/* 骨架屏网格项 */
+.skeleton-grid-item {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    gap: 0.75rem;
+}
+
+/* 控制面板骨架屏 */
+.skeleton-controls {
+    display: flex;
+    gap: 4rem;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+    background: transparent;
+    border: none;
+}
+
+.skeleton-volume-section,
+.skeleton-timer-section {
+    flex: 1;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.skeleton-volume-label,
+.skeleton-timer-label {
+    width: 60px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+}
+
+.skeleton-volume-slider {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.skeleton-timer-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.skeleton-timer-button {
+    width: 100%;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .skeleton-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    
+    .skeleton-controls {
+        flex-direction: column;
+        gap: 2rem;
+    }
+}
+/* 
+===== 加载状态指示器样式 ===== */
+
+.loading-status {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    z-index: 10000;
+    background: var(--glass-medium);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border-medium);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    min-width: 320px;
+    max-width: 90vw;
+    box-shadow: var(--shadow-elevated);
+    opacity: 0;
+    transition: all var(--duration-normal) var(--ease-natural);
+    pointer-events: none;
+    display: none;
+}
+
+.loading-status.loading-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.loading-status.loading-hiding {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+}
+
+/* 加载进度条 */
+.loading-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.loading-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.8) 50%,
+        rgba(255, 255, 255, 0.6) 100%);
+    border-radius: 2px;
+    width: 0%;
+    transition: width var(--duration-fast) var(--ease-natural);
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 100%);
+    animation: loadingShimmer 2s ease-in-out infinite;
+}
+
+@keyframes loadingShimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* 加载消息 */
+.loading-message {
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    line-height: var(--leading-tight);
+}
+
+/* 加载详情 */
+.loading-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-normal);
+}
+
+.loading-phase {
+    opacity: 0.8;
+}
+
+.loading-percentage {
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+}
+
+/* 加载状态动画 */
+.loading-status.loading-pulse {
+    animation: loadingPulse 2s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+    0%, 100% {
+        box-shadow: var(--shadow-elevated);
+    }
+    50% {
+        box-shadow: var(--shadow-elevated), 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* 错误状态 */
+.loading-status.loading-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.loading-status.loading-error .loading-progress-fill {
+    background: linear-gradient(90deg, 
+        rgba(239, 68, 68, 0.6) 0%,
+        rgba(239, 68, 68, 0.8) 50%,
+        rgba(239, 68, 68, 0.6) 100%);
+}
+
+.loading-status.loading-error .loading-message {
+    color: rgba(239, 68, 68, 0.9);
+}
+
+/* 成功状态 */
+.loading-status.loading-success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.loading-status.loading-success .loading-progress-fill {
+    background: linear-gradient(90deg, 
+        rgba(34, 197, 94, 0.6) 0%,
+        rgba(34, 197, 94, 0.8) 50%,
+        rgba(34, 197, 94, 0.6) 100%);
+}
+
+.loading-status.loading-success .loading-message {
+    color: rgba(34, 197, 94, 0.9);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .loading-status {
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        transform: none;
+        min-width: auto;
+        max-width: none;
+        width: calc(100% - 2rem);
+    }
+    
+    .loading-status.loading-visible {
+        transform: none;
+    }
+    
+    .loading-status.loading-hiding {
+        transform: translateY(20px);
+    }
+}
+
+/* 减少动画偏好适配 */
+@media (prefers-reduced-motion: reduce) {
+    .loading-progress-fill::after {
+        animation: none;
+    }
+    
+    .loading-status.loading-pulse {
+        animation: none;
+    }
+}/
+* ===== 音效按钮加载状态样式 ===== */
+
+/* 加载中状态 */
+.sound-btn.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.sound-btn.loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    animation: soundButtonSpin 1s linear infinite;
+    z-index: 1;
+}
+
+.sound-btn.loading .sound-icon,
+.sound-btn.loading .sound-name {
+    opacity: 0.3;
+}
+
+@keyframes soundButtonSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 加载成功状态 */
+.sound-btn.load-success {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.sound-btn.load-success::after {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 16px;
+    height: 16px;
+    background: rgba(34, 197, 94, 0.9);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    animation: loadSuccessPopIn 0.3s ease-out;
+}
+
+@keyframes loadSuccessPopIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 加载错误状态 */
+.sound-btn.load-error {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.sound-btn.load-error::after {
+    content: '!';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 16px;
+    height: 16px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    animation: loadErrorShake 0.5s ease-in-out;
+}
+
+@keyframes loadErrorShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+/* 禁用状态 */
+.sound-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.sound-btn:disabled:hover {
+    transform: none;
+    box-shadow: var(--shadow-float);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .sound-btn.loading::before {
+        width: 16px;
+        height: 16px;
+        margin: -8px 0 0 -8px;
+    }
+    
+    .sound-btn.load-success::after,
+    .sound-btn.load-error::after {
+        width: 14px;
+        height: 14px;
+        font-size: 9px;
+        top: 6px;
+        right: 6px;
+    }
+}
+
+/* 减少动画偏好适配 */
+@media (prefers-reduced-motion: reduce) {
+    .sound-btn.loading::before {
+        animation: none;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+    
+    .sound-btn.load-success::after {
+        animation: none;
+    }
+    
+    .sound-btn.load-error::after {
+        animation: none;
+    }
+}
