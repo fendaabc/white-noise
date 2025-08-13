@@ -318,9 +318,10 @@ class LoadingOrchestrator {
         
         try {
             const tasks = [
-                { name: '背景图片预加载', weight: 50 },
-                { name: '背景轮播初始化', weight: 30 },
-                { name: '性能优化设置', weight: 20 }
+                { name: '背景图片预加载', weight: 45 },
+                { name: '背景轮播初始化', weight: 25 },
+                { name: '常用音效预热', weight: 20 },
+                { name: '性能优化设置', weight: 10 }
             ];
 
             let completedWeight = 0;
@@ -339,6 +340,13 @@ class LoadingOrchestrator {
                         break;
                     case '性能优化设置':
                         taskResult = await this.applyPerformanceOptimizations();
+                        break;
+                    case '常用音效预热':
+                        if (typeof window !== 'undefined' && typeof window.warmupFrequentlyUsedSounds === 'function') {
+                            taskResult = await window.warmupFrequentlyUsedSounds(['rain'], 2000);
+                        } else {
+                            taskResult = { skipped: true };
+                        }
                         break;
                 }
 

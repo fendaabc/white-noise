@@ -18,6 +18,7 @@ window.bindEventListeners = bindEventListeners;
 window.initializeRippleEffects = initializeRippleEffects;
 window.restoreUserSettings = restoreUserSettings;
 window.initBackgroundSlideshow = initBackgroundSlideshow;
+window.warmupFrequentlyUsedSounds = warmupFrequentlyUsedSounds;
 
 // 音效配置
 const soundConfig = {
@@ -430,6 +431,27 @@ async function ensureSoundLoaded(name) {
     }
   } catch (error) {
     console.error(`按需加载音效失败: ${name}`, error);
+  }
+}
+
+/**
+ * 预热常用音效（后台异步加载，不触发播放）
+ * @param {string[]} names - 需要预热的音效名列表
+ * @param {number} delayMs - 启动前延迟毫秒数，默认2000ms
+ */
+async function warmupFrequentlyUsedSounds(names = ['rain'], delayMs = 2000) {
+  try {
+    if (!Array.isArray(names) || names.length === 0) return;
+    if (delayMs && delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    for (const name of names) {
+      await ensureSoundLoaded(name);
+    }
+    console.log('常用音效预热完成:', names);
+  } catch (e) {
+    console.warn('常用音效预热失败:', e);
   }
 }
 
