@@ -439,17 +439,18 @@ async function ensureSoundLoaded(name) {
  * @param {string[]} names - 需要预热的音效名列表
  * @param {number} delayMs - 启动前延迟毫秒数，默认2000ms
  */
-async function warmupFrequentlyUsedSounds(names = ['rain'], delayMs = 2000) {
+async function warmupFrequentlyUsedSounds(names = null, delayMs = 2000) {
   try {
-    if (!Array.isArray(names) || names.length === 0) return;
+    const list = Array.isArray(names) && names.length > 0 ? names : Object.keys(soundConfig || {});
+    if (!Array.isArray(list) || list.length === 0) return;
     if (delayMs && delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
 
-    for (const name of names) {
+    for (const name of list) {
       await ensureSoundLoaded(name);
     }
-    console.log('常用音效预热完成:', names);
+    console.log('常用音效预热完成:', list);
   } catch (e) {
     console.warn('常用音效预热失败:', e);
   }

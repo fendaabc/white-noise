@@ -343,7 +343,7 @@ class LoadingOrchestrator {
                         break;
                     case '常用音效预热':
                         if (typeof window !== 'undefined' && typeof window.warmupFrequentlyUsedSounds === 'function') {
-                            taskResult = await window.warmupFrequentlyUsedSounds(['rain'], 2000);
+                            taskResult = await window.warmupFrequentlyUsedSounds(null, 2000);
                         } else {
                             taskResult = { skipped: true };
                         }
