@@ -417,6 +417,14 @@ function bindEventListeners() {
   // 页面可见性变化（处理标签页切换）
   document.addEventListener("visibilitychange", handleVisibilityChange);
 
+  // 初始化水平滚动管理器
+  try {
+    horizontalScrollManager = new HorizontalScrollManager('#sound-selector');
+    console.log("水平滚动管理器初始化完成");
+  } catch (error) {
+    console.error("水平滚动管理器初始化失败:", error);
+  }
+
   console.log("事件监听器绑定完成");
 }
 
@@ -512,6 +520,9 @@ function restoreUserSettings() {
   elements.volumeSlider.value = appState.volume;
   updateVolumeDisplay(appState.volume);
   audioManager.setMasterVolume(appState.volume / 100);
+
+  // 恢复音效激活状态（但不自动播放）
+  updateSoundButtonsState();
 
   console.log("用户设置已恢复");
 }
@@ -871,6 +882,10 @@ window.addEventListener("beforeunload", () => {
 
   if (errorRecoveryManager) {
     errorRecoveryManager.destroy();
+  }
+
+  if (horizontalScrollManager) {
+    horizontalScrollManager.destroy();
   }
 
   if (backgroundSlideshow) {
@@ -1270,6 +1285,465 @@ function handleVisibilityChange() {
       audioManager.resumeContext();
     }
     console.log("页面已显示");
+  }
+}
+
+// ==================== 水平滚动管理器 ====================
+
+/**
+ * 水平滚动管理器
+ * 管理声音选择器的水平滚动交互和指示器显示
+ */
+class HorizontalScrollManager {
+  constructor(containerSelector) {
+    this.container = document.querySelector(containerSelector);
+    if (!this.container) {
+      console.warn(`HorizontalScrollManager: 容器 ${containerSelector} 未找到`);
+      return;
+    }
+    
+    this.scrollList = this.container.querySelector('.sound-list-container');
+    this.leftIndicator = this.container.querySelector('.scroll-indicator-left');
+    this.rightIndicator = this.container.querySelector('.scroll-indicator-right');
+    
+    if (!this.scrollList) {
+      console.warn('HorizontalScrollManager: 滚动列表容器未找到');
+      return;
+    }
+    
+    this.setupAccessibility();
+    this.init();
+  }
+  
+  setupAccessibility() {
+    // 为滚动容器添加ARIA标签
+    this.scrollList.setAttribute('role', 'region');
+    this.scrollList.setAttribute('aria-label', '声音选择列表，可水平滚动');
+    
+    // 添加滚动状态的实时区域
+    this.createScrollStatusAnnouncer();
+    
+    // 为容器添加键盘导航说明
+    this.container.setAttribute('aria-label', '声音选择器，使用左右箭头键滚动');
+    
+    // 检测浏览器特性支持
+    this.detectBrowserFeatures();
+  }
+  
+  detectBrowserFeatures() {
+    // 检测是否支持平滑滚动
+    this.supportsSmoothScroll = 'scrollBehavior' in document.documentElement.style;
+    
+    // 检测是否支持触摸事件
+    this.supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // 检测是否支持CSS Grid和Flexbox
+    this.supportsFlexbox = CSS.supports('display', 'flex');
+    
+    console.log('浏览器特性检测:', {
+      smoothScroll: this.supportsSmoothScroll,
+      touch: this.supportsTouch,
+      flexbox: this.supportsFlexbox
+    });
+  }
+  
+  createScrollStatusAnnouncer() {
+    // 创建屏幕阅读器公告区域
+    this.announcer = document.createElement('div');
+    this.announcer.setAttribute('aria-live', 'polite');
+    this.announcer.setAttribute('aria-atomic', 'true');
+    this.announcer.className = 'sr-only';
+    this.announcer.style.cssText = `
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    `;
+    
+    this.container.appendChild(this.announcer);
+  }
+  
+  init() {
+    this.bindEvents();
+    this.updateIndicators();
+    
+    // 延迟恢复滚动位置，确保内容已加载
+    setTimeout(() => {
+      this.restoreScrollPosition();
+    }, 100);
+  }
+  
+  bindEvents() {
+    if (!this.scrollList) return;
+    
+    // 鼠标滚轮水平滚动
+    this.scrollList.addEventListener('wheel', this.handleWheel.bind(this));
+    
+    // 滚动位置更新和保存（使用节流优化性能）
+    const handleScroll = this.throttle(() => {
+      this.updateIndicators();
+      this.debouncedSavePosition();
+    }, 16); // 约60fps
+    
+    this.scrollList.addEventListener('scroll', handleScroll);
+    
+    // 窗口大小变化处理（使用防抖）
+    const handleResize = this.debounce(() => {
+      this.updateIndicators();
+      this.handleResponsiveTransition();
+    }, 250);
+    
+    window.addEventListener('resize', handleResize);
+    
+    // 键盘导航
+    this.container.addEventListener('keydown', this.handleKeydown.bind(this));
+    
+    // 确保容器可以获得焦点
+    if (!this.container.hasAttribute('tabindex')) {
+      this.container.setAttribute('tabindex', '0');
+    }
+    
+    // 创建防抖保存函数
+    this.debouncedSavePosition = this.debounce(() => {
+      this.saveScrollPosition();
+    }, 500);
+    
+    // 保存事件处理器引用以便清理
+    this.boundHandlers = {
+      scroll: handleScroll,
+      resize: handleResize,
+      wheel: this.handleWheel.bind(this),
+      keydown: this.handleKeydown.bind(this)
+    };
+  }
+  
+  handleWheel(event) {
+    // 只处理垂直滚动转换为水平滚动
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    
+    event.preventDefault();
+    
+    // 兼容不同浏览器的滚动值
+    const delta = event.deltaY || event.detail || event.wheelDelta;
+    const scrollAmount = delta > 0 ? 50 : -50;
+    
+    this.scrollList.scrollLeft += scrollAmount;
+  }
+  
+  handleKeydown(event) {
+    if (!this.scrollList) return;
+    
+    const scrollAmount = 100; // 每次滚动的像素数
+    let handled = false;
+    
+    switch (event.key) {
+      case 'ArrowLeft':
+        this.scrollList.scrollLeft -= scrollAmount;
+        handled = true;
+        break;
+      case 'ArrowRight':
+        this.scrollList.scrollLeft += scrollAmount;
+        handled = true;
+        break;
+      case 'Home':
+        this.scrollTo(0);
+        handled = true;
+        break;
+      case 'End':
+        this.scrollTo(this.scrollList.scrollWidth - this.scrollList.clientWidth);
+        handled = true;
+        break;
+    }
+    
+    if (handled) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+  
+  updateIndicators() {
+    if (!this.scrollList || !this.leftIndicator || !this.rightIndicator) return;
+    
+    const { scrollLeft, scrollWidth, clientWidth } = this.scrollList;
+    const maxScroll = scrollWidth - clientWidth;
+    
+    // 左侧指示器可见性
+    const showLeftIndicator = scrollLeft > 10;
+    if (showLeftIndicator) {
+      this.leftIndicator.classList.add('visible');
+    } else {
+      this.leftIndicator.classList.remove('visible');
+    }
+    
+    // 右侧指示器可见性
+    const showRightIndicator = scrollLeft < maxScroll - 10;
+    if (showRightIndicator) {
+      this.rightIndicator.classList.add('visible');
+    } else {
+      this.rightIndicator.classList.remove('visible');
+    }
+    
+    // 更新屏幕阅读器公告
+    this.updateScrollAnnouncement(scrollLeft, maxScroll, showLeftIndicator, showRightIndicator);
+  }
+  
+  updateScrollAnnouncement(scrollLeft, maxScroll, showLeftIndicator, showRightIndicator) {
+    if (!this.announcer) return;
+    
+    // 防抖公告更新，避免过于频繁的公告
+    if (this.announcementTimeout) {
+      clearTimeout(this.announcementTimeout);
+    }
+    
+    this.announcementTimeout = setTimeout(() => {
+      let announcement = '';
+      
+      if (maxScroll <= 0) {
+        announcement = '所有声音选项都可见';
+      } else {
+        const progress = Math.round((scrollLeft / maxScroll) * 100);
+        announcement = `滚动进度 ${progress}%`;
+        
+        if (showLeftIndicator && showRightIndicator) {
+          announcement += '，可向左右滚动查看更多选项';
+        } else if (showRightIndicator) {
+          announcement += '，可向右滚动查看更多选项';
+        } else if (showLeftIndicator) {
+          announcement += '，可向左滚动查看更多选项';
+        } else {
+          announcement += '，已显示所有选项';
+        }
+      }
+      
+      this.announcer.textContent = announcement;
+    }, 1000); // 1秒延迟，避免滚动时过于频繁的公告
+  }
+  
+  /**
+   * 处理响应式过渡
+   */
+  handleResponsiveTransition() {
+    // 为主要元素添加过渡类
+    const elementsToTransition = [
+      document.querySelector('.main-container'),
+      document.querySelector('.control-panel'),
+      this.container
+    ];
+    
+    elementsToTransition.forEach(element => {
+      if (element) {
+        element.classList.add('responsive-transition');
+        
+        // 过渡完成后移除类，避免影响其他动画
+        setTimeout(() => {
+          element.classList.remove('responsive-transition');
+        }, 300);
+      }
+    });
+  }
+  
+  /**
+   * 滚动到指定位置
+   * @param {number} position - 滚动位置
+   * @param {boolean} smooth - 是否平滑滚动
+   */
+  scrollTo(position, smooth = true) {
+    if (!this.scrollList) return;
+    
+    // 使用特性检测决定滚动方式
+    if (smooth && this.supportsSmoothScroll) {
+      this.scrollList.scrollTo({
+        left: position,
+        behavior: 'smooth'
+      });
+    } else if (smooth && !this.supportsSmoothScroll) {
+      // 为不支持平滑滚动的浏览器提供动画回退
+      this.animateScrollTo(position);
+    } else {
+      this.scrollList.scrollLeft = position;
+    }
+  }
+  
+  /**
+   * 动画滚动回退（用于不支持CSS平滑滚动的浏览器）
+   * @param {number} targetPosition - 目标位置
+   */
+  animateScrollTo(targetPosition) {
+    const startPosition = this.scrollList.scrollLeft;
+    const distance = targetPosition - startPosition;
+    const duration = 300;
+    let startTime = null;
+    
+    const animateScroll = (currentTime) => {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+      
+      // 使用缓动函数
+      const easeInOutCubic = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      this.scrollList.scrollLeft = startPosition + distance * easeInOutCubic;
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateScroll);
+      }
+    };
+    
+    requestAnimationFrame(animateScroll);
+  }
+  
+  /**
+   * 滚动到指定元素
+   * @param {HTMLElement} element - 目标元素
+   * @param {boolean} smooth - 是否平滑滚动
+   */
+  scrollToElement(element, smooth = true) {
+    if (!this.scrollList || !element) return;
+    
+    const containerRect = this.scrollList.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const scrollLeft = this.scrollList.scrollLeft;
+    
+    const targetPosition = scrollLeft + elementRect.left - containerRect.left - 
+                          (containerRect.width - elementRect.width) / 2;
+    
+    this.scrollTo(targetPosition, smooth);
+  }
+  
+  /**
+   * 防抖函数
+   * @param {Function} func - 要防抖的函数
+   * @param {number} wait - 等待时间（毫秒）
+   * @returns {Function} 防抖后的函数
+   */
+  debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+  
+  /**
+   * 节流函数
+   * @param {Function} func - 要节流的函数
+   * @param {number} limit - 限制时间间隔（毫秒）
+   * @returns {Function} 节流后的函数
+   */
+  throttle(func, limit) {
+    let inThrottle;
+    return function executedFunction(...args) {
+      if (!inThrottle) {
+        func.apply(this, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
+  }
+  
+  /**
+   * 保存滚动位置
+   */
+  saveScrollPosition() {
+    if (!this.scrollList) return;
+    
+    try {
+      localStorage.setItem('horizontalScrollPosition', this.scrollList.scrollLeft.toString());
+    } catch (error) {
+      console.warn('保存滚动位置失败:', error);
+    }
+  }
+  
+  /**
+   * 恢复滚动位置
+   */
+  restoreScrollPosition() {
+    if (!this.scrollList) return;
+    
+    try {
+      const savedPosition = localStorage.getItem('horizontalScrollPosition');
+      if (savedPosition !== null) {
+        const position = parseInt(savedPosition, 10);
+        if (!isNaN(position)) {
+          this.scrollTo(position, false); // 不使用平滑滚动以避免初始化时的动画
+        }
+      }
+    } catch (error) {
+      console.warn('恢复滚动位置失败:', error);
+    }
+  }
+  
+  /**
+   * 销毁管理器
+   */
+  destroy() {
+    // 保存当前滚动位置
+    this.saveScrollPosition();
+    
+    // 清理定时器
+    if (this.announcementTimeout) {
+      clearTimeout(this.announcementTimeout);
+    }
+    
+    // 移除事件监听器
+    if (this.boundHandlers && this.scrollList) {
+      this.scrollList.removeEventListener('wheel', this.boundHandlers.wheel);
+      this.scrollList.removeEventListener('scroll', this.boundHandlers.scroll);
+    }
+    
+    if (this.boundHandlers && this.container) {
+      this.container.removeEventListener('keydown', this.boundHandlers.keydown);
+    }
+    
+    if (this.boundHandlers) {
+      window.removeEventListener('resize', this.boundHandlers.resize);
+    }
+    
+    // 清理公告元素
+    if (this.announcer && this.announcer.parentNode) {
+      this.announcer.parentNode.removeChild(this.announcer);
+    }
+  }
+}
+
+// 全局水平滚动管理器实例
+let horizontalScrollManager;
+
+/**
+ * 动态调整声音按钮布局
+ * 根据按钮数量自动优化显示效果
+ */
+function adjustSoundButtonLayout() {
+  const soundList = document.querySelector('.sound-list');
+  const soundButtons = document.querySelectorAll('.sound-btn');
+  
+  if (!soundList || !soundButtons.length) return;
+  
+  const buttonCount = soundButtons.length;
+  console.log(`检测到 ${buttonCount} 个声音按钮`);
+  
+  // 如果按钮数量为7个或更少，使用完美适配布局
+  if (buttonCount <= 7) {
+    soundList.style.justifyContent = 'space-evenly';
+    soundList.classList.add('perfect-fit-layout');
+    console.log('应用完美适配布局（7个或更少按钮）');
+  } else {
+    // 如果按钮数量超过7个，使用滚动布局
+    soundList.style.justifyContent = 'flex-start';
+    soundList.classList.remove('perfect-fit-layout');
+    soundList.classList.add('scroll-layout');
+    console.log('应用滚动布局（超过7个按钮）');
   }
 }
 

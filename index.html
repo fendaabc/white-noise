@@ -50,43 +50,54 @@
             播放
         </button>
         
-        <!-- 白噪音选择器 -->
-        <div id="sound-selector" class="sound-selector">
-            <button class="sound-btn" data-sound="waves" aria-label="海浪声">
-                <span class="sound-icon">🌊</span>
-                <span class="sound-name">海浪声</span>
-                <div class="play-indicator">▶</div>
-            </button>
-            <button class="sound-btn" data-sound="rain" aria-label="雨声">
-                <span class="sound-icon">🌧️</span>
-                <span class="sound-name">雨声</span>
-                <div class="play-indicator">▶</div>
-            </button>
-            <button class="sound-btn" data-sound="fire" aria-label="篝火声">
-                <span class="sound-icon">🔥</span>
-                <span class="sound-name">篝火声</span>
-                <div class="play-indicator">▶</div>
-            </button>
-            <button class="sound-btn" data-sound="forest" aria-label="森林声">
-                <span class="sound-icon">🌲</span>
-                <span class="sound-name">森林声</span>
-                <div class="play-indicator">▶</div>
-            </button>
-            <button class="sound-btn" data-sound="cafe" aria-label="咖啡厅">
-                <span class="sound-icon">☕</span>
-                <span class="sound-name">咖啡厅</span>
-                <div class="play-indicator">▶</div>
-            </button>
-            <button class="sound-btn" data-sound="white-noise" aria-label="白噪音">
-                <span class="sound-icon">🎧</span>
-                <span class="sound-name">白噪音</span>
-                <div class="play-indicator">▶</div>
-            </button>
-            <button class="sound-btn" data-sound="wind" aria-label="风声">
-                <span class="sound-icon">💨</span>
-                <span class="sound-name">风声</span>
-                <div class="play-indicator">▶</div>
-            </button>
+        <!-- 水平滚动声音选择器 -->
+        <div id="sound-selector" class="sound-selector-horizontal">
+            <!-- 左侧滚动指示器 -->
+            <div class="scroll-indicator scroll-indicator-left" aria-hidden="true"></div>
+            
+            <!-- 声音列表容器 -->
+            <div class="sound-list-container" role="region" aria-label="声音选择列表">
+                <div class="sound-list">
+                    <button class="sound-btn" data-sound="waves" aria-label="海浪声">
+                        <span class="sound-icon">🌊</span>
+                        <span class="sound-name">海浪声</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
+                    <button class="sound-btn" data-sound="rain" aria-label="雨声">
+                        <span class="sound-icon">🌧️</span>
+                        <span class="sound-name">雨声</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
+                    <button class="sound-btn" data-sound="fire" aria-label="篝火声">
+                        <span class="sound-icon">🔥</span>
+                        <span class="sound-name">篝火声</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
+                    <button class="sound-btn" data-sound="forest" aria-label="森林声">
+                        <span class="sound-icon">🌲</span>
+                        <span class="sound-name">森林声</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
+                    <button class="sound-btn" data-sound="cafe" aria-label="咖啡厅">
+                        <span class="sound-icon">☕</span>
+                        <span class="sound-name">咖啡厅</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
+                    <button class="sound-btn" data-sound="white-noise" aria-label="白噪音">
+                        <span class="sound-icon">🎧</span>
+                        <span class="sound-name">白噪音</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
+                    <button class="sound-btn" data-sound="wind" aria-label="风声">
+                        <span class="sound-icon">💨</span>
+                        <span class="sound-name">风声</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 右侧滚动指示器 -->
+            <div class="scroll-indicator scroll-indicator-right" aria-hidden="true"></div>
         </div>
         
         <!-- 控制面板 -->
