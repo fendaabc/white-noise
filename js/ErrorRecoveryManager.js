@@ -59,8 +59,6 @@ class ErrorRecoveryManager {
 
         // 初始化网络监控
         this.initNetworkMonitoring();
-
-        console.log('ErrorRecoveryManager 初始化完成');
     }
 
     /**
@@ -70,13 +68,11 @@ class ErrorRecoveryManager {
         // 监听网络状态变化
         window.addEventListener('online', () => {
             this.isOnline = true;
-            console.log('网络连接已恢复');
             this.handleNetworkRecovery();
         });
 
         window.addEventListener('offline', () => {
             this.isOnline = false;
-            console.log('网络连接已断开');
             this.handleNetworkDisconnection();
         });
 

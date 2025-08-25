@@ -27,10 +27,8 @@ class AudioManager {
             this.audioContext = new AudioContextClass();
             
             // 不在初始化时强制恢复AudioContext，等待用户交互
-            console.log('AudioContext创建成功，状态:', this.audioContext.state);
             
             this.isInitialized = true;
-            console.log('AudioManager初始化成功');
         } catch (error) {
             console.error('AudioManager初始化失败:', error);
             throw error;
@@ -50,7 +48,6 @@ class AudioManager {
         const loadPromises = Object.entries(soundList).map(async ([name, config]) => {
             try {
                 const path = typeof config === 'string' ? config : config.path;
-                console.log(`开始加载音频: ${name} - ${path}`);
                 
                 // 使用fetch获取音频文件
                 const response = await fetch(path);
@@ -64,7 +61,6 @@ class AudioManager {
                 const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
                 this.soundBuffers[name] = audioBuffer;
                 
-                console.log(`音频加载成功: ${name}`);
                 return { name, success: true };
             } catch (error) {
                 console.error(`音频加载失败 ${name}:`, error);
@@ -79,12 +75,6 @@ class AudioManager {
         // 统计加载结果
         const successCount = results.filter(result => result.success).length;
         const failedResults = results.filter(result => !result.success);
-        
-        console.log(`音频加载完成，成功加载 ${successCount}/${Object.keys(soundList).length} 个文件`);
-        
-        if (failedResults.length > 0) {
-            console.warn('以下音频加载失败:', failedResults);
-        }
         
         // 如果没有任何音频加载成功，抛出错误
         if (successCount === 0) {
@@ -106,9 +96,7 @@ class AudioManager {
             }
             
             if (this.audioContext.state === 'suspended') {
-                console.log('恢复AudioContext...');
                 await this.audioContext.resume();
-                console.log('AudioContext状态:', this.audioContext.state);
             }
 
             // 检查音频是否存在
@@ -151,7 +139,6 @@ class AudioManager {
 
             // 开始播放
             source.start(0);
-            console.log(`开始播放音效: ${name}`);
             return true;
 
         } catch (error) {
@@ -186,7 +173,6 @@ class AudioManager {
                 }, 100);
 
                 delete this.activeSources[name];
-                console.log(`停止播放音效: ${name}`);
                 return true;
             }
             return false;
@@ -213,7 +199,6 @@ class AudioManager {
                 gainNode.gain.setValueAtTime(gainNode.gain.value, currentTime);
                 gainNode.gain.linearRampToValueAtTime(normalizedVolume, currentTime + 0.1);
                 
-                console.log(`设置音效音量 ${name}: ${normalizedVolume}`);
                 return true;
             }
             return false;
@@ -234,8 +219,6 @@ class AudioManager {
         Object.keys(this.activeSources).forEach(name => {
             this.setVolume(name, this.masterVolume);
         });
-        
-        console.log(`设置主音量: ${this.masterVolume}`);
     }
 
     /**
@@ -246,7 +229,6 @@ class AudioManager {
         activeNames.forEach(name => {
             this.stopSound(name);
         });
-        console.log('停止所有音效');
     }
 
     /**
@@ -316,8 +298,6 @@ class AudioManager {
         this.activeSources = {};
         this.gainNodes = {};
         this.isInitialized = false;
-        
-        console.log('AudioManager已销毁，资源已释放');
     }
 
     /**
@@ -357,7 +337,6 @@ class AudioManager {
     async resumeContext() {
         if (this.audioContext && this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
-            console.log('AudioContext已恢复');
         }
     }
 }

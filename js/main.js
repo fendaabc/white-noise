@@ -105,18 +105,15 @@ async function initApp() {
     // 设置错误恢复回调
     errorRecoveryManager.setCallbacks({
       onError: (errorRecord) => {
-        console.log('错误记录:', errorRecord);
+        // 错误记录
       },
       onRetry: (retryInfo) => {
-        console.log(`重试操作: ${retryInfo.context.type} - 第${retryInfo.retryCount}次`);
         showRetryNotification(retryInfo);
       },
       onFallback: (fallbackInfo) => {
-        console.log('执行降级策略:', fallbackInfo);
         showFallbackNotification(fallbackInfo);
       },
       onRecovery: (recoveryInfo) => {
-        console.log('错误恢复成功:', recoveryInfo);
         showRecoveryNotification(recoveryInfo);
       }
     });
@@ -140,9 +137,9 @@ async function initApp() {
     await loadingOrchestrator.startLoading({
       onProgressUpdate: updateLoadingProgress,
       onPhaseComplete: (phase, result) => {
-        // 只记录关键阶段
+        // 只记录完成阶段
         if (phase === 'complete') {
-          console.log(`加载阶段完成: ${phase}`);
+          // 加载完成
         }
       },
       onError: (errorInfo) => {
@@ -263,7 +260,7 @@ async function initManagers() {
 function updateLoadingProgress(progress) {
   // 只记录关键错误和完成信息
   if (progress.progress === 100 || progress.message.includes('错误') || progress.message.includes('失败')) {
-    console.log(`[${progress.phase}] ${progress.message}`);
+    // 记录错误信息
   }
 }
 
@@ -287,10 +284,7 @@ function showLoadingError(message) {
  * @param {string} message - 成功消息
  */
 function showLoadingSuccess(message) {
-  // 仅在开发模式下显示
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    console.log(`[加载成功] ${message}`);
-  }
+  // 在生产环境中不显示日志
 }
 
 /**
@@ -348,14 +342,10 @@ function handleLoadingError(errorInfo) {
     showErrorMessage(`加载失败: ${error.message}`);
   } else {
     // 非关键错误：只在加载状态指示器中显示警告
-    console.warn(`非关键加载错误 [${context}]:`, error);
-    
     if (phase === 'skeleton') {
       // 骨架屏错误不影响用户体验
-      console.log('骨架屏加载失败，继续正常流程');
     } else if (phase === 'background') {
       // 背景资源错误只记录日志
-      console.warn('[背景资源] 部分背景资源加载失败，但不影响使用');
     }
   }
 }
@@ -785,8 +775,7 @@ function updateSoundButtonsState() {
  * @param {string} status - 加载状态
  */
 function updateSoundButtonLoadingState(soundName, status) {
-  // 不再更新UI，只记录日志
-  console.log(`[按钮状态] ${soundName} -> ${status}`);
+  // 不再更新UI，也不记录日志
 }
 
 /**
@@ -795,8 +784,7 @@ function updateSoundButtonLoadingState(soundName, status) {
  * @param {number} progress - 进度百分比
  */
 function updateSoundButtonProgress(soundName, progress) {
-  // 不再更新UI，只记录日志
-  console.log(`[按钮进度] ${soundName} -> ${progress}%`);
+  // 不再更新UI，也不记录日志
 }
 
 /**
@@ -804,8 +792,7 @@ function updateSoundButtonProgress(soundName, progress) {
  * @param {HTMLElement} button - 音效按钮元素
  */
 function addProgressIndicator(button) {
-  // 不再添加UI元素，只记录日志
-  console.log('[按钮指示器] 进度指示器已禁用');
+  // 不再添加UI元素，也不记录日志
 }
 
 /**
@@ -1157,7 +1144,6 @@ function startTimer(minutes) {
     if (success) {
       appState.timerActive = true;
       appState.timerDuration = minutes;
-      console.log(`定时器已设置: ${minutes}分钟`);
     } else {
       showErrorMessage("定时器设置失败");
     }
@@ -1191,8 +1177,6 @@ function handleTimerExpired() {
 
     // 重置定时器按钮状态
     elements.timerButtons.forEach((btn) => btn.classList.remove("active"));
-
-    console.log("定时器到期，已停止播放");
   } catch (error) {
     console.error("处理定时器到期失败:", error);
   }
@@ -1213,7 +1197,7 @@ function handleCancelTimer() {
     // 重置定时器按钮状态
     elements.timerButtons.forEach((btn) => btn.classList.remove("active"));
 
-    console.log("定时器已取消");
+    // 定时器已取消
   } catch (error) {
     console.error("取消定时器失败:", error);
   }
@@ -1273,13 +1257,11 @@ function handleKeyboardShortcuts(event) {
 function handleVisibilityChange() {
   if (document.hidden) {
     // 页面隐藏时暂停（可选）
-    console.log("页面已隐藏");
   } else {
     // 页面显示时恢复AudioContext（处理自动播放策略）
     if (audioManager && appState.isPlaying) {
       audioManager.resumeContext();
     }
-    console.log("页面已显示");
   }
 }
 
@@ -1334,12 +1316,6 @@ class HorizontalScrollManager {
     
     // 检测是否支持CSS Grid和Flexbox
     this.supportsFlexbox = CSS.supports('display', 'flex');
-    
-    console.log('浏览器特性检测:', {
-      smoothScroll: this.supportsSmoothScroll,
-      touch: this.supportsTouch,
-      flexbox: this.supportsFlexbox
-    });
   }
   
   createScrollStatusAnnouncer() {
@@ -1726,19 +1702,16 @@ function adjustSoundButtonLayout() {
   if (!soundList || !soundButtons.length) return;
   
   const buttonCount = soundButtons.length;
-  console.log(`检测到 ${buttonCount} 个声音按钮`);
   
   // 如果按钮数量为7个或更少，使用完美适配布局
   if (buttonCount <= 7) {
     soundList.style.justifyContent = 'space-evenly';
     soundList.classList.add('perfect-fit-layout');
-    console.log('应用完美适配布局（7个或更少按钮）');
   } else {
     // 如果按钮数量超过7个，使用滚动布局
     soundList.style.justifyContent = 'flex-start';
     soundList.classList.remove('perfect-fit-layout');
     soundList.classList.add('scroll-layout');
-    console.log('应用滚动布局（超过7个按钮）');
   }
 }
 
@@ -1898,8 +1871,6 @@ function switchBackgroundTheme(soundName) {
   if (soundName && themeClasses.includes(`bg-${soundName}`)) {
     backgroundContainer.classList.add(`bg-${soundName}`);
   }
-
-  console.log(`背景主题已切换到: ${soundName}`);
 }
 
 /**
@@ -1921,8 +1892,6 @@ function resetBackgroundTheme() {
   themeClasses.forEach((className) => {
     backgroundContainer.classList.remove(className);
   });
-
-  console.log("背景主题已重置到默认状态");
 }
 
 // ==================== 工具函数 ====================
@@ -2166,183 +2135,4 @@ function initBackgroundSlideshow() {
   backgroundSlideshow.init();
 }
 
-// 导出全局函数（用于调试）
-window.whiteNoiseApp = {
-  get audioManager() {
-    return audioManager;
-  },
-  get timerManager() {
-    return timerManager;
-  },
-  get skeletonManager() {
-    return skeletonManager;
-  },
-  get loadingOrchestrator() {
-    return loadingOrchestrator;
-  },
-  get appState() {
-    return appState;
-  },
-  showErrorMessage,
-  hideErrorMessage,
-  checkBrowserSupport,
-  
-  // HLS调试方法
-  async autoDebugHLS() {
-    if (audioManager && typeof audioManager.autoDebug === 'function') {
-      console.log('🔍 手动启动HLS自动调试...');
-      try {
-        await audioManager.autoDebug();
-        console.log('✅ 自动调试完成');
-      } catch (error) {
-        console.error('❌ 自动调试失败:', error);
-      }
-    } else {
-      console.error('❌ audioManager 或 autoDebug 方法不存在');
-    }
-  },
-  
-  async testHLS() {
-    if (audioManager && typeof audioManager.testAllAudios === 'function') {
-      console.log('开始测试HLS音频播放...');
-      await audioManager.testAllAudios();
-    } else {
-      console.error('audioManager 或 testAllAudios 方法不存在');
-    }
-  },
-  
-  async testSingleHLS(name) {
-    if (audioManager && soundConfig[name]) {
-      console.log(`测试单个音频: ${name}`);
-      await audioManager.testAudio(name, soundConfig[name].path);
-    } else {
-      console.error(`音频 ${name} 不存在或 audioManager 未初始化`);
-    }
-  },
-  
-  getAudioStatus() {
-    if (audioManager) {
-      return {
-        isInitialized: audioManager.isInitialized,
-        loadedSounds: audioManager.getLoadedSounds(),
-        currentlyPlaying: audioManager.getCurrentlyPlaying(),
-        memoryInfo: audioManager.getMemoryInfo()
-      };
-    }
-    return null;
-  },
-  getPerformanceInfo: () => {
-    return {
-      audioMemory: audioManager ? audioManager.getMemoryInfo() : null,
-      timerActive: timerManager ? timerManager.isActive() : false,
-      appState: appState ? { ...appState } : null,
-      performance: {
-        loadTime: performance.now(),
-        memory: performance.memory
-          ? {
-              used:
-                Math.round(
-                  (performance.memory.usedJSHeapSize / 1024 / 1024) * 100
-                ) / 100,
-              total:
-                Math.round(
-                  (performance.memory.totalJSHeapSize / 1024 / 1024) * 100
-                ) / 100,
-              limit:
-                Math.round(
-                  (performance.memory.jsHeapSizeLimit / 1024 / 1024) * 100
-                ) / 100,
-            }
-          : "Not available",
-      },
-    };
-  },
-  runTests: () => {
-    const tests = [];
 
-    // 测试1: 检查全局对象
-    tests.push({
-      name: "全局对象存在",
-      passed: !!window.whiteNoiseApp,
-      message: window.whiteNoiseApp ? "✓" : "全局对象未找到",
-    });
-
-    // 测试2: 检查管理器
-    tests.push({
-      name: "AudioManager存在",
-      passed: !!audioManager,
-      message: audioManager ? "✓" : "AudioManager未初始化",
-    });
-
-    tests.push({
-      name: "TimerManager存在",
-      passed: !!timerManager,
-      message: timerManager ? "✓" : "TimerManager未初始化",
-    });
-
-    tests.push({
-      name: "应用状态存在",
-      passed: !!appState,
-      message: appState ? "✓" : "应用状态未初始化",
-    });
-
-    // 测试3: 检查DOM元素
-    const requiredElements = [
-      "play-pause-btn",
-      "sound-selector",
-      "settings-panel",
-      "volume-slider",
-    ];
-    const missingElements = requiredElements.filter(
-      (id) => !document.getElementById(id)
-    );
-    tests.push({
-      name: "必需DOM元素存在",
-      passed: missingElements.length === 0,
-      message:
-        missingElements.length === 0
-          ? "✓"
-          : `缺失: ${missingElements.join(", ")}`,
-    });
-
-    // 测试4: 检查浏览器支持
-    const support = checkBrowserSupport();
-    tests.push({
-      name: "Web Audio API支持",
-      passed: support.webAudio,
-      message: support.webAudio ? "✓" : "不支持Web Audio API",
-    });
-
-    tests.push({
-      name: "LocalStorage支持",
-      passed: support.localStorage,
-      message: support.localStorage ? "✓" : "不支持LocalStorage",
-    });
-
-    // 测试5: 检查音频加载状态
-    if (audioManager) {
-      const loadedSounds = audioManager.getLoadedSounds();
-      tests.push({
-        name: "音频文件已加载",
-        passed: loadedSounds.length > 0,
-        message: `已加载 ${loadedSounds.length} 个音频文件`,
-      });
-    }
-
-    // 输出结果
-    console.group("🧪 白噪音应用测试结果");
-    tests.forEach((test) => {
-      console.log(`${test.passed ? "✅" : "❌"} ${test.name}: ${test.message}`);
-    });
-
-    const passCount = tests.filter((t) => t.passed).length;
-    console.log(
-      `\n📊 总结: ${passCount}/${tests.length} 测试通过 ${
-        passCount === tests.length ? "🎉" : "❌"
-      }`
-    );
-    console.groupEnd();
-
-    return tests;
-  },
-};
