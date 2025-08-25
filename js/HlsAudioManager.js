@@ -286,14 +286,24 @@ class HlsAudioManager {
             debug: false,
             enableWorker: true,
             lowLatencyMode: false,
-            maxLoadingDelay: 4,
-            maxBufferLength: 30,
-            maxBufferSize: 60 * 1000 * 1000, // 60MB
-            startLevel: -1,
-            capLevelToPlayerSize: false,
-            fragLoadingTimeOut: 20000,
-            manifestLoadingTimeOut: 10000,
-            levelLoadingTimeOut: 10000
+            // 调整缓冲策略
+            maxBufferLength: 30, // 保持缓冲区最多30秒
+            maxMaxBufferLength: 120, // 内存中最多保留120秒的数据
+            maxBufferSize: 60 * 1000 * 1000, // 60MB缓冲区大小
+            maxBufferHole: 0.5, // 允许最大空洞0.5秒
+            // 调整加载超时
+            fragLoadingTimeOut: 20000, // 切片加载超时20秒
+            manifestLoadingTimeOut: 10000, // 清单加载超时10秒
+            levelLoadingTimeOut: 10000, // 级别加载超时10秒
+            // 启动时加载的切片数量
+            startFragPrefetch: true, // 开启启动时预取
+            maxLoadingDelay: 4, // 最大加载延迟
+            startLevel: -1, // 自动选择起始级别
+            capLevelToPlayerSize: false, // 不限制级别到播放器尺寸
+            // 重试策略优化
+            fragLoadingMaxRetry: 4, // 切片加载最大重试4次
+            manifestLoadingMaxRetry: 3, // 清单加载最大重试3次
+            levelLoadingMaxRetry: 4 // 级别加载最大重试4次
         });
         
         // 设置超时机制
@@ -759,6 +769,87 @@ class HlsAudioManager {
             }
         }
         return loaded;
+    }
+
+    /**
+     * 预缓冲指定音效
+     * 这会触发hls.js开始加载音频切片，但不会播放
+     * @param {string} name - 音效名称
+     */
+    prebufferSound(name) {
+        if (!this.audioElements.has(name)) {
+            console.warn(`[预缓冲] 音频尚未加载，无法预缓冲: ${name}`);
+            return;
+        }
+
+        const audio = this.audioElements.get(name);
+        const hls = this.hlsPlayers.get(name);
+
+        // 如果hls实例存在，并且媒体已附加，可以开始加载
+        if (hls && hls.media === audio) {
+            console.log(`[预缓冲] 开始主动加载数据: ${name}`);
+            try {
+                hls.startLoad(); // 明确指令hls.js开始下载切片
+                
+                // 设置音量为0并进行短暂的预加载
+                const originalVolume = audio.volume;
+                audio.volume = 0;
+                
+                // 尝试短暂播放以触发数据加载，然后立即暂停
+                const prebufferPlay = async () => {
+                    try {
+                        await audio.play();
+                        // 等待一个很短的时间让数据开始缓冲
+                        setTimeout(() => {
+                            audio.pause();
+                            audio.currentTime = 0;
+                            audio.volume = originalVolume;
+                            console.log(`[预缓冲] 预加载完成: ${name}`);
+                        }, 100); // 100ms后暂停
+                    } catch (playError) {
+                        // 如果播放失败（比如需要用户交互），就只进行加载操作
+                        audio.volume = originalVolume;
+                        console.log(`[预缓冲] 无法播放，但已触发加载: ${name}`);
+                    }
+                };
+                
+                // 在下一个tick执行，避免阻塞当前执行
+                setTimeout(prebufferPlay, 0);
+                
+            } catch (error) {
+                console.warn(`[预缓冲] hls.startLoad 失败: ${name}`, error);
+            }
+        } else if (this.canPlayHlsNatively()) {
+            // 对于原生支持HLS的浏览器（如Safari），调用load()
+            console.log(`[预缓冲] 使用原生load()加载数据: ${name}`);
+            try {
+                audio.load();
+                
+                // 同样进行短暂的预播放
+                const originalVolume = audio.volume;
+                audio.volume = 0;
+                
+                const prebufferPlay = async () => {
+                    try {
+                        await audio.play();
+                        setTimeout(() => {
+                            audio.pause();
+                            audio.currentTime = 0;
+                            audio.volume = originalVolume;
+                            console.log(`[预缓冲] 原生预加载完成: ${name}`);
+                        }, 100);
+                    } catch (playError) {
+                        audio.volume = originalVolume;
+                        console.log(`[预缓冲] 原生无法播放，但已触发加载: ${name}`);
+                    }
+                };
+                
+                setTimeout(prebufferPlay, 0);
+                
+            } catch (error) {
+                console.warn(`[预缓冲] 原生 load() 失败: ${name}`, error);
+            }
+        }
     }
 
     /**

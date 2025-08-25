@@ -39,11 +39,6 @@ window.loadAudioFiles = loadAudioFiles;
 
 // 音效配置 - 使用HLS流媒体
 const soundConfig = {
-  rain: {
-    path: "audio.hls/rain/playlist.m3u8",
-    name: "雨声",
-    icon: "🌧️",
-  },
   waves: {
     path: "audio.hls/waves/playlist.m3u8",
     name: "海浪声",
@@ -68,6 +63,11 @@ const soundConfig = {
     path: "audio.hls/white-noise/playlist.m3u8",
     name: "白噪音",
     icon: "🎧",
+  },
+  rain: {
+    path: "audio.hls/rain/playlist.m3u8",
+    name: "雨声",
+    icon: "🌧️",
   },
   wind: {
     path: "audio.hls/wind/playlist.m3u8",
@@ -239,8 +239,6 @@ async function initManagers() {
       onLoadingError: handleAudioLoadingError,
     });
   }
-
-  await audioManager.init();
 
   // 供全局模块访问
   try {
@@ -479,20 +477,26 @@ async function ensureSoundLoaded(name) {
 }
 
 /**
- * 预热常用音效（后台异步加载，不触发播放）
+ * 预热常用音效（后台异步加载，主动缓冲数据）
  * @param {string[]} names - 需要预热的音效名列表
  * @param {number} delayMs - 启动前延迟毫秒数，默认2000ms
  */
 async function warmupFrequentlyUsedSounds(names = null, delayMs = 2000) {
   try {
-    const list = Array.isArray(names) && names.length > 0 ? names : Object.keys(soundConfig || {});
+    const list = Array.isArray(names) && names.length > 0 ? names : ['waves']; // 默认预热“海浪声”
     if (!Array.isArray(list) || list.length === 0) return;
     if (delayMs && delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
 
+    console.log(`🔥 开始预热音效: ${list.join(', ')}`);
     for (const name of list) {
+      // 确保清单已加载
       await ensureSoundLoaded(name);
+      // 调用新的预缓冲方法
+      if (audioManager && typeof audioManager.prebufferSound === 'function') {
+        audioManager.prebufferSound(name);
+      }
     }
   } catch (e) {
     console.warn('常用音效预热失败:', e);
@@ -883,6 +887,12 @@ window.addEventListener("beforeunload", () => {
  * 处理播放/暂停按钮点击
  */
 async function handlePlayPauseClick() {
+  const btn = elements.playPauseBtn;
+  // 立即添加加载中状态
+  btn.classList.add("loading");
+  btn.textContent = "加载中";
+  btn.disabled = true; // 防止重复点击
+
   try {
     if (appState.isPlaying) {
       // 暂停所有播放
@@ -893,9 +903,9 @@ async function handlePlayPauseClick() {
       // 重置背景主题
       resetBackgroundTheme();
     } else {
-      // 如果没有选中的音效，默认播放雨声
+      // 如果没有选中的音效，默认播放海浪声
       if (appState.playingSounds.size === 0) {
-        const defaultSound = "rain";
+        const defaultSound = "waves";
         await ensureSoundLoaded(defaultSound);
         if (await audioManager.playSound(defaultSound, appState.volume / 100)) {
           appState.isPlaying = true;
@@ -936,6 +946,12 @@ async function handlePlayPauseClick() {
   } catch (error) {
     console.error("播放/暂停操作失败:", error);
     showErrorMessage("操作失败，请重试");
+  } finally {
+    // 无论成功失败，最后都移除加载中状态
+    btn.classList.remove("loading");
+    btn.disabled = false;
+    // 更新按钮的最终状态
+    updatePlayButtonState();
   }
 }
 
@@ -1241,8 +1257,8 @@ function handleKeyboardShortcuts(event) {
           currentButton.click();
         }
       } else {
-        // 播放第一个音效（雨声）
-        const firstButton = document.querySelector('[data-sound="rain"]');
+        // 播放第一个音效（海浪声）
+        const firstButton = document.querySelector('[data-sound="waves"]');
         if (firstButton) {
           firstButton.click();
         }

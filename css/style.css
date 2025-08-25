@@ -715,6 +715,25 @@ html, body {
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+/* 加载中状态 */
+.play-button.loading {
+    pointer-events: none; /* 防止重复点击 */
+    background: var(--glass-medium);
+    border-color: var(--glass-border-medium);
+    animation: spin 1s linear infinite;
+    box-shadow: 
+        var(--shadow-elevated),
+        var(--glow-medium),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    cursor: not-allowed;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 /* 涟漪效果容器 */
 .play-button::before {
     content: '';
