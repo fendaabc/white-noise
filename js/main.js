@@ -64,15 +64,15 @@ const soundConfig = {
     name: "白噪音",
     icon: "🎧",
   },
-  rain: {
-    path: "audio.hls/rain/playlist.m3u8",
-    name: "雨声",
-    icon: "🌧️",
-  },
   wind: {
     path: "audio.hls/wind/playlist.m3u8",
     name: "风声",
     icon: "💨",
+  },
+  rain: {
+    path: "audio.hls/rain/playlist.m3u8",
+    name: "雨声",
+    icon: "🌧️",
   },
   rain2: {
     path: "audio.hls/rain2/playlist.m3u8",
