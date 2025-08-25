@@ -47,8 +47,6 @@ class LoadingOrchestrator {
         this.onPhaseComplete = null;
         this.onError = null;
         this.onComplete = null;
-
-        console.log('LoadingOrchestrator 初始化完成');
     }
 
     /**
@@ -57,7 +55,6 @@ class LoadingOrchestrator {
      */
     async startLoading(options = {}) {
         try {
-            console.log('开始加载编排流程...');
             this.markPerformance('loading_start');
             
             // 重置状态
@@ -76,12 +73,10 @@ class LoadingOrchestrator {
             
             // 背景加载阶段（非阻塞）
             this.executePhase(this.loadingPhases.BACKGROUND).catch(error => {
-                console.warn('背景加载阶段失败:', error);
                 this.handleError(error, this.loadingPhases.BACKGROUND);
             });
 
             this.markPerformance('loading_complete');
-            console.log('加载编排流程完成');
             
             if (this.onComplete) {
                 this.onComplete(this.getLoadingSummary());
@@ -100,7 +95,6 @@ class LoadingOrchestrator {
      */
     async executePhase(phase) {
         try {
-            console.log(`开始执行加载阶段: ${phase}`);
             this.markPerformance(`phase_${phase}_start`);
             
             this.currentPhase = phase;
@@ -111,8 +105,6 @@ class LoadingOrchestrator {
 
             this.updateLoadingState(phase, 'completed');
             this.markPerformance(`phase_${phase}_complete`);
-            
-            console.log(`加载阶段 ${phase} 完成`);
             
             if (this.onPhaseComplete) {
                 this.onPhaseComplete(phase, result);
@@ -142,7 +134,6 @@ class LoadingOrchestrator {
                 // 回退到原有的重试逻辑
                 const retryCount = this.retryAttempts.get(phase) || 0;
                 if (retryCount < this.maxRetries) {
-                    console.log(`重试加载阶段 ${phase}, 第 ${retryCount + 1} 次`);
                     this.retryAttempts.set(phase, retryCount + 1);
                     
                     // 延迟重试
@@ -186,10 +177,17 @@ class LoadingOrchestrator {
             const skeletonPromise = new Promise((resolve) => {
                 // 骨架屏应该已经在main.js中初始化了
                 // 这里主要是确保状态同步
-                if (window.skeletonManager && window.skeletonManager.isShowing()) {
-                    resolve(true);
+                if (window.skeletonManager) {
+                    if (typeof window.skeletonManager.isShowing === 'function' && window.skeletonManager.isShowing()) {
+                        resolve(true);
+                    } else if (window.skeletonManager.showing !== undefined) {
+                        resolve(window.skeletonManager.showing);
+                    } else {
+                        console.info('骨架屏管理器存在但状态未知，假设正常');
+                        resolve(true);
+                    }
                 } else {
-                    console.warn('骨架屏未正确显示');
+                    console.info('骨架屏管理器未初始化，跳过检查');
                     resolve(false);
                 }
             });

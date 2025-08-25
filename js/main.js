@@ -11,6 +11,22 @@ let loadingOrchestrator;
 let errorRecoveryManager;
 let appState;
 
+// 抑制浏览器扩展相关的错误提示
+window.addEventListener('error', function(e) {
+  if (e.message && e.message.includes('runtime.lastError')) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// 抑制未捕获的Promise错误（如果与runtime相关）
+window.addEventListener('unhandledrejection', function(e) {
+  if (e.reason && e.reason.message && e.reason.message.includes('runtime.lastError')) {
+    e.preventDefault();
+    return false;
+  }
+});
+
 // 将关键函数暴露到全局作用域，供LoadingOrchestrator调用
 window.initDOMElements = initDOMElements;
 window.initManagers = initManagers;
@@ -19,43 +35,49 @@ window.initializeRippleEffects = initializeRippleEffects;
 window.restoreUserSettings = restoreUserSettings;
 window.initBackgroundSlideshow = initBackgroundSlideshow;
 window.warmupFrequentlyUsedSounds = warmupFrequentlyUsedSounds;
+window.loadAudioFiles = loadAudioFiles;
 
-// 音效配置
+// 音效配置 - 使用HLS流媒体
 const soundConfig = {
   rain: {
-    path: "audio/rain.mp3",
+    path: "audio.hls/rain/playlist.m3u8",
     name: "雨声",
     icon: "🌧️",
   },
   waves: {
-    path: "audio/waves.mp3",
+    path: "audio.hls/waves/playlist.m3u8",
     name: "海浪声",
     icon: "🌊",
   },
   fire: {
-    path: "audio/fire.mp3",
+    path: "audio.hls/fire/playlist.m3u8",
     name: "篝火声",
     icon: "🔥",
   },
   forest: {
-    path: "audio/forest.mp3",
+    path: "audio.hls/forest/playlist.m3u8",
     name: "森林声",
     icon: "🌲",
   },
   cafe: {
-    path: "audio/cafe.mp3",
+    path: "audio.hls/cafe/playlist.m3u8",
     name: "咖啡厅",
     icon: "☕",
   },
   "white-noise": {
-    path: "audio/white-noise.mp3",
+    path: "audio.hls/white-noise/playlist.m3u8",
     name: "白噪音",
     icon: "🎧",
   },
   wind: {
-    path: "audio/wind.mp3",
+    path: "audio.hls/wind/playlist.m3u8",
     name: "风声",
     icon: "💨",
+  },
+  rain2: {
+    path: "audio.hls/rain2/playlist.m3u8",
+    name: "雨声2",
+    icon: "🌦️",
   },
 };
 
@@ -77,8 +99,6 @@ const elements = {};
  */
 async function initApp() {
   try {
-    console.log("开始初始化白噪音应用...");
-
     // 初始化错误恢复管理器
     errorRecoveryManager = new ErrorRecoveryManager();
     
@@ -103,52 +123,41 @@ async function initApp() {
 
     // 初始化加载编排器
     loadingOrchestrator = new LoadingOrchestrator();
-    
-    // 将错误恢复管理器注入到加载编排器
     loadingOrchestrator.setErrorRecoveryManager(errorRecoveryManager);
 
-    // 初始化并显示骨架屏
+    // 初始化骨架屏
     try {
       skeletonManager = new SkeletonManager();
       skeletonManager.show();
-      console.log("骨架屏初始化和显示完成");
     } catch (error) {
       console.error("骨架屏初始化失败:", error);
-      // 如果骨架屏失败，继续执行但不显示任何加载指示器
     }
 
     // 初始化状态
     initAppState();
-    console.log("应用状态初始化完成");
 
     // 使用加载编排器管理加载流程
     await loadingOrchestrator.startLoading({
-      onProgressUpdate: (progress) => {
-        console.log(
-          `加载进度: ${progress.phase} - ${progress.progress}% - ${progress.message}`
-        );
-        updateLoadingProgress(progress);
-      },
+      onProgressUpdate: updateLoadingProgress,
       onPhaseComplete: (phase, result) => {
-        console.log(`加载阶段完成: ${phase}`, result);
+        // 只记录关键阶段
+        if (phase === 'complete') {
+          console.log(`加载阶段完成: ${phase}`);
+        }
       },
       onError: (errorInfo) => {
         console.error(`加载错误: ${errorInfo.context}`, errorInfo.error);
         handleLoadingError(errorInfo);
       },
       onComplete: (summary) => {
-        console.log("加载编排完成:", summary);
         showLoadingSuccess('应用加载完成');
         finalizeInitialization();
       },
     });
-
-    console.log("白噪音应用初始化完成");
   } catch (error) {
     console.error("应用初始化失败:", error);
     showErrorMessage(`应用初始化失败: ${error.message}`);
 
-    // 错误时也要隐藏骨架屏
     if (skeletonManager) {
       skeletonManager.hide();
     }
@@ -211,20 +220,21 @@ function initDOMElements() {
  * 初始化管理器
  */
 async function initManagers() {
-  // 初始化 LazyAudioManager 并完成必要绑定
-  audioManager = new LazyAudioManager();
-
-  // 将音频配置传入懒加载管理器，便于按需加载时获取配置
+  // 创建 HlsAudioManager 实例
+  audioManager = new HlsAudioManager();
+  await audioManager.init();
+  
+  // 设置音频配置
   if (typeof audioManager.setSoundConfigs === 'function') {
     audioManager.setSoundConfigs(soundConfig);
   }
 
-  // 注入错误恢复管理器（若存在），便于在加载失败时走统一重试/降级
+  // 注入错误恢复管理器
   if (errorRecoveryManager && typeof audioManager.setErrorRecoveryManager === 'function') {
     audioManager.setErrorRecoveryManager(errorRecoveryManager);
   }
 
-  // 设置加载相关的回调（仅后台日志，不显示UI）
+  // 设置加载相关的回调
   if (typeof audioManager.setCallbacks === 'function') {
     audioManager.setCallbacks({
       onLoadingStateChange: handleAudioLoadingStateChange,
@@ -235,7 +245,7 @@ async function initManagers() {
 
   await audioManager.init();
 
-  // 供 ErrorRecoveryManager 等全局模块访问（其使用 window.audioManager）
+  // 供全局模块访问
   try {
     window.audioManager = audioManager;
   } catch (e) {
@@ -244,28 +254,28 @@ async function initManagers() {
 
   // 初始化TimerManager
   timerManager = new TimerManager();
-
-  console.log("管理器初始化完成");
 }
 
 /**
- * 更新加载进度显示（仅后台日志）
+ * 更新加载进度显示（仅关键错误）
  * @param {Object} progress - 进度信息
  */
 function updateLoadingProgress(progress) {
-  // 只在控制台输出进度信息，不显示UI
-  console.log(`[加载进度] ${progress.phase}: ${progress.progress}% - ${progress.message}`);
+  // 只记录关键错误和完成信息
+  if (progress.progress === 100 || progress.message.includes('错误') || progress.message.includes('失败')) {
+    console.log(`[${progress.phase}] ${progress.message}`);
+  }
 }
 
 /**
- * 隐藏加载进度显示（仅后台日志）
+ * 隐藏加载进度显示
  */
 function hideLoadingProgress() {
-  console.log('[加载进度] 加载进度隐藏');
+  // 无需日志
 }
 
 /**
- * 显示加载错误状态（仅后台日志）
+ * 显示加载错误状态
  * @param {string} message - 错误消息
  */
 function showLoadingError(message) {
@@ -273,34 +283,38 @@ function showLoadingError(message) {
 }
 
 /**
- * 显示加载成功状态（仅后台日志）
+ * 显示加载成功状态
  * @param {string} message - 成功消息
  */
 function showLoadingSuccess(message) {
-  console.log(`[加载成功] ${message}`);
+  // 仅在开发模式下显示
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    console.log(`[加载成功] ${message}`);
+  }
 }
 
 /**
- * 处理音频加载状态变化（仅后台日志）
+ * 处理音频加载状态变化（仅错误日志）
  * @param {string} name - 音频名称
  * @param {string} status - 加载状态
  * @param {Object} state - 状态详情
  */
 function handleAudioLoadingStateChange(name, status, state) {
-  console.log(`[音频加载] ${name} -> ${status}`);
-  // 不再更新UI，只记录日志
+  // 只记录错误和失败状态
+  if (status.includes('错误') || status.includes('失败') || status === 'error' || status === 'failed') {
+    console.error(`[音频加载] ${name} -> ${status}`);
+  }
 }
 
 /**
- * 处理音频加载进度（仅后台日志）
+ * 处理音频加载进度（禁用日志）
  * @param {string} name - 音频名称
  * @param {number} progress - 进度百分比
  * @param {number} loaded - 已加载字节数
  * @param {number} total - 总字节数
  */
 function handleAudioLoadingProgress(name, progress, loaded, total) {
-  console.log(`[音频进度] ${name} - ${progress}% (${loaded}/${total} bytes)`);
-  // 不再更新UI，只记录日志
+  // 不输出进度日志，减少控制台噪音
 }
 
 /**
@@ -352,23 +366,16 @@ function handleLoadingError(errorInfo) {
  */
 function finalizeInitialization() {
   try {
-    console.log("开始最终初始化阶段...");
-    
     // 隐藏骨架屏，显示真实内容
     if (skeletonManager) {
-      console.log("准备隐藏骨架屏...");
       try {
         skeletonManager.hide(() => {
-          console.log("骨架屏隐藏完成，真实内容已显示");
+          // 骨架屏隐藏完成回调
         });
       } catch (error) {
         console.error("隐藏骨架屏时出错:", error);
       }
-    } else {
-      console.warn("skeletonManager未初始化");
     }
-
-    console.log("最终初始化完成");
   } catch (error) {
     console.error("最终初始化失败:", error);
     showErrorMessage(`初始化失败: ${error.message}`);
@@ -420,12 +427,9 @@ function bindEventListeners() {
   // 初始化水平滚动管理器
   try {
     horizontalScrollManager = new HorizontalScrollManager('#sound-selector');
-    console.log("水平滚动管理器初始化完成");
   } catch (error) {
     console.error("水平滚动管理器初始化失败:", error);
   }
-
-  console.log("事件监听器绑定完成");
 }
 
 /**
@@ -433,8 +437,6 @@ function bindEventListeners() {
  */
 async function loadAudioFiles() {
   try {
-    console.log("开始加载音频文件...");
-
     // 设置超时机制，防止无限加载
     const loadPromise = audioManager.loadSounds(soundConfig);
     const timeoutPromise = new Promise((_, reject) => {
@@ -442,11 +444,9 @@ async function loadAudioFiles() {
     });
 
     await Promise.race([loadPromise, timeoutPromise]);
-    console.log("音频文件加载完成");
 
     // 检查加载成功的音频数量
     const loadedSounds = audioManager.getLoadedSounds();
-    console.log("成功加载的音频:", loadedSounds);
 
     if (loadedSounds.length === 0) {
       throw new Error("没有音频文件加载成功");
@@ -454,13 +454,11 @@ async function loadAudioFiles() {
 
     // 预热AudioContext（可选）
     if (audioManager.getContextState() === "suspended") {
-      console.log("AudioContext处于暂停状态，等待用户交互");
+      // AudioContext处于暂停状态，等待用户交互
     }
   } catch (error) {
     console.error("音频文件加载失败:", error);
     showErrorMessage("音频文件加载失败，但应用仍可正常使用界面功能");
-
-    // 即使音频加载失败，也要继续初始化
   }
 }
 
@@ -506,7 +504,6 @@ async function warmupFrequentlyUsedSounds(names = null, delayMs = 2000) {
     for (const name of list) {
       await ensureSoundLoaded(name);
     }
-    console.log('常用音效预热完成:', list);
   } catch (e) {
     console.warn('常用音效预热失败:', e);
   }
@@ -523,8 +520,6 @@ function restoreUserSettings() {
 
   // 恢复音效激活状态（但不自动播放）
   updateSoundButtonsState();
-
-  console.log("用户设置已恢复");
 }
 
 /**
@@ -2189,8 +2184,53 @@ window.whiteNoiseApp = {
     return appState;
   },
   showErrorMessage,
-  hideErrorMessageeErrorMessage,
+  hideErrorMessage,
   checkBrowserSupport,
+  
+  // HLS调试方法
+  async autoDebugHLS() {
+    if (audioManager && typeof audioManager.autoDebug === 'function') {
+      console.log('🔍 手动启动HLS自动调试...');
+      try {
+        await audioManager.autoDebug();
+        console.log('✅ 自动调试完成');
+      } catch (error) {
+        console.error('❌ 自动调试失败:', error);
+      }
+    } else {
+      console.error('❌ audioManager 或 autoDebug 方法不存在');
+    }
+  },
+  
+  async testHLS() {
+    if (audioManager && typeof audioManager.testAllAudios === 'function') {
+      console.log('开始测试HLS音频播放...');
+      await audioManager.testAllAudios();
+    } else {
+      console.error('audioManager 或 testAllAudios 方法不存在');
+    }
+  },
+  
+  async testSingleHLS(name) {
+    if (audioManager && soundConfig[name]) {
+      console.log(`测试单个音频: ${name}`);
+      await audioManager.testAudio(name, soundConfig[name].path);
+    } else {
+      console.error(`音频 ${name} 不存在或 audioManager 未初始化`);
+    }
+  },
+  
+  getAudioStatus() {
+    if (audioManager) {
+      return {
+        isInitialized: audioManager.isInitialized,
+        loadedSounds: audioManager.getLoadedSounds(),
+        currentlyPlaying: audioManager.getCurrentlyPlaying(),
+        memoryInfo: audioManager.getMemoryInfo()
+      };
+    }
+    return null;
+  },
   getPerformanceInfo: () => {
     return {
       audioMemory: audioManager ? audioManager.getMemoryInfo() : null,

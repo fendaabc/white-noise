@@ -1,0 +1,10 @@
+{
+  "cafe": "audio.hls/cafe/playlist.m3u8",
+  "fire": "audio.hls/fire/playlist.m3u8",
+  "forest": "audio.hls/forest/playlist.m3u8",
+  "rain": "audio.hls/rain/playlist.m3u8",
+  "rain2": "audio.hls/rain2/playlist.m3u8",
+  "waves": "audio.hls/waves/playlist.m3u8",
+  "white-noise": "audio.hls/white-noise/playlist.m3u8",
+  "wind": "audio.hls/wind/playlist.m3u8"
+}

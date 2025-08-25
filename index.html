@@ -7,6 +7,7 @@
     <title>白噪音 - 放松身心的环境音效</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌧️</text></svg>">
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
     <!-- 骨架屏容器 -->
@@ -93,6 +94,11 @@
                         <span class="sound-name">风声</span>
                         <div class="play-indicator">▶</div>
                     </button>
+                    <button class="sound-btn" data-sound="rain2" aria-label="雨声2">
+                        <span class="sound-icon">🌦️</span>
+                        <span class="sound-name">雨声2</span>
+                        <div class="play-indicator">▶</div>
+                    </button>
                 </div>
             </div>
             
@@ -171,6 +177,7 @@
     <script src="js/LoadingOrchestrator.js"></script>
     <script src="js/AudioManager.js"></script>
     <script src="js/LazyAudioManager.js"></script>
+    <script src="js/HlsAudioManager.js"></script>
     <script src="js/TimerManager.js"></script>
     <script src="js/main.js"></script>
 </body>
