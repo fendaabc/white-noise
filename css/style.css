@@ -2999,68 +2999,91 @@ html, body {
 ===== 新增：模式切换器样式 ===== 
 */
 
-/* 模式切换器主容器 */
+/* 模式切换器主容器 - 降低视觉重要性 */
 .mode-switcher {
     display: flex;
     justify-content: center;
-    margin: var(--space-lg) 0 var(--space-2xl) 0;
-    z-index: 10;
+    margin: var(--space-sm) 0 var(--space-lg) 0; /* 减小间距 */
+    z-index: 5; /* 降低层级 */
+    opacity: 0.8; /* 降低不透明度 */
+    transition: opacity var(--duration-normal) var(--ease-natural);
 }
 
+.mode-switcher:hover {
+    opacity: 1;
+}
+
+/* 模式切换容器 - 轻量化设计 */
 .mode-toggle-container {
     position: relative;
     display: flex;
-    background: var(--glass-medium);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border-medium);
-    border-radius: 50px;
-    padding: 4px;
+    background: var(--glass-light); /* 更轻的背景 */
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--glass-border-light);
+    border-radius: 25px; /* 减小圆角 */
+    padding: 3px; /* 减小内边距 */
     box-shadow: var(--shadow-float);
     overflow: hidden;
+    transform: scale(0.9); /* 整体缩小 */
+    transition: all var(--duration-normal) var(--ease-natural);
 }
 
-/* 模式按钮 */
+.mode-toggle-container:hover {
+    transform: scale(0.95);
+    background: var(--glass-medium);
+    border-color: var(--glass-border-medium);
+}
+
+/* 模式按钮 - 轻量化设计 */
 .mode-btn {
     position: relative;
-    padding: 12px 24px;
+    padding: 8px 16px; /* 减小内边距 */
     background: transparent;
     border: none;
-    border-radius: 46px;
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
+    border-radius: 22px;
+    color: var(--text-tertiary); /* 使用更淡的颜色 */
+    font-size: var(--text-xs); /* 减小字体 */
     font-weight: var(--font-medium);
     font-family: var(--font-primary);
     cursor: pointer;
     transition: all var(--duration-normal) var(--ease-natural);
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    min-width: 120px;
+    gap: var(--space-xs);
+    min-width: 90px; /* 减小最小宽度 */
     justify-content: center;
     z-index: 2;
 }
 
 .mode-btn:hover {
-    color: var(--text-primary);
+    color: var(--text-secondary);
+    background: var(--glass-light);
     transform: translateY(-1px);
 }
 
 .mode-btn.active {
     color: var(--text-primary);
+    background: var(--glass-medium); /* 使用毛玻璃背景而不是实色 */
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border-medium);
     font-weight: var(--font-semibold);
 }
 
+/* 模式图标 - 轻量化 */
 .mode-icon {
-    font-size: var(--text-lg);
+    font-size: var(--text-base); /* 减小图标尺寸 */
     transition: transform var(--duration-normal) var(--ease-natural);
+    opacity: 0.8;
 }
 
 .mode-btn:hover .mode-icon {
-    transform: scale(1.1);
+    transform: scale(1.05); /* 减少放大效果 */
+    opacity: 1;
 }
 
 .mode-btn.active .mode-icon {
-    transform: scale(1.05);
+    transform: scale(1.02);
+    opacity: 1;
 }
 
 /* 模式指示器 */
@@ -3144,33 +3167,51 @@ body.campus-mode .sound-btn.active {
 ===== 自定义音频标识 ===== 
 */
 
-/* 自定义音频角标 */
+/* 自定义音频角标 - 优化设计 */
 .sound-btn.custom::after {
-    content: '🎨';
+    content: '✨'; /* 使用更优雅的星星图标 */
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 18px;
-    height: 18px;
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-    border: 2px solid var(--glass-border-medium);
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* 优雅的渐变背景 */
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
-    z-index: 2;
-    animation: customBadgePulse 2s ease-in-out infinite;
+    font-size: 11px;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    z-index: 3;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    animation: customBadgeGlow 3s ease-in-out infinite;
+    transition: all var(--duration-normal) var(--ease-natural);
 }
 
-@keyframes customBadgePulse {
-    0%, 100% {
+/* 悬停效果 */
+.sound-btn.custom:hover::after {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.6);
+}
+
+/* 自定义标识动画效果 */
+@keyframes customBadgeGlow {
+    0%, 100% { 
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
         transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
     }
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 4px rgba(255, 107, 107, 0);
+    50% { 
+        box-shadow: 0 2px 12px rgba(102, 126, 234, 0.6);
+        transform: scale(1.02);
+    }
+}
+
+/* 渐进动画优化 */
+@media (prefers-reduced-motion: reduce) {
+    .sound-btn.custom::after {
+        animation: none;
     }
 }
 

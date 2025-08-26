@@ -56,6 +56,17 @@ class SoundButtonGenerator {
     setCustomSounds(customSounds) {
         this.customSounds = customSounds || {};
     }
+    
+    /**
+     * 检查是否为自定义音效
+     * @param {string} soundKey - 音效键名
+     * @returns {boolean} 是否为自定义音效
+     */
+    isCustomSound(soundKey) {
+        return this.customSounds && 
+               this.customSounds[soundKey] && 
+               this.customSounds[soundKey].type === 'local';
+    }
 
     /**
      * 获取当前模式的音效配置

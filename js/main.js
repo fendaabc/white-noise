@@ -415,6 +415,15 @@ async function initManagers() {
       initialMode: appState.currentMode
     });
     
+    // 确保按钮生成：延迟执行以确保DOM完全准备好
+    setTimeout(() => {
+      if (modeManager && modeManager.soundButtonGenerator) {
+        console.log('强制重新生成音效按钮...');
+        modeManager.soundButtonGenerator.setCurrentMode(appState.currentMode);
+        modeManager.soundButtonGenerator.generateButtons();
+      }
+    }, 100);
+    
     // 设置模式变更回调
     modeManager.setModeChangeCallback((newMode, oldMode) => {
       appState.currentMode = newMode;
@@ -566,6 +575,15 @@ function finalizeInitialization() {
         });
       } catch (error) {
         console.error("隐藏骨架屏时出错:", error);
+      }
+    }
+    
+    // 最终确认：确保声音按钮已正确生成
+    if (modeManager && modeManager.soundButtonGenerator) {
+      const soundList = document.getElementById('sound-list');
+      if (soundList && soundList.children.length === 0) {
+        console.log('检测到声音列表为空，重新生成按钮...');
+        modeManager.soundButtonGenerator.generateButtons();
       }
     }
   } catch (error) {
