@@ -18,6 +18,7 @@ let modeManager;
 let configManager; // 新增配置管理器
 let notificationManager; // 新增通知管理器
 let performanceOptimizer; // 新增性能优化器
+let recipeManager; // 新增学习配方管理器
 
 // 抑制浏览器扩展相关的错误提示
 window.addEventListener('error', function(e) {
@@ -258,6 +259,7 @@ function initDOMElements() {
   elements.settingsBtn = document.getElementById("settings-btn");
   elements.volumeSlider = document.getElementById("volume-slider");
   elements.volumeDisplay = document.getElementById("volume-display");
+  elements.muteBtn = document.getElementById("mute-btn"); // 新增：静音按钮
   elements.timerButtons = document.querySelectorAll(".timer-btn");
   elements.customTimerBtn = document.getElementById("custom-timer-btn");
   elements.customTimerInput = document.getElementById("custom-timer-input");
@@ -456,6 +458,19 @@ async function initManagers() {
   } catch (error) {
     console.error('初始化ModeManager失败:', error);
   }
+  
+  // 初始化RecipeManager
+  try {
+    recipeManager = new RecipeManager();
+    await recipeManager.init();
+    
+    // 设置全局访问
+    window.recipeManager = recipeManager;
+    
+    console.log('学习配方管理器初始化成功');
+  } catch (error) {
+    console.error('初始化RecipeManager失败:', error);
+  }
 }
 
 /**
@@ -610,6 +625,11 @@ function bindEventListeners() {
 
   // 音量控制
   elements.volumeSlider.addEventListener("input", handleVolumeChange);
+  
+  // 静音按钮（新增：支持静音/取消静音切换）
+  if (elements.muteBtn) {
+    elements.muteBtn.addEventListener("click", handleMuteClick);
+  }
 
   // 定时器按钮
   elements.timerButtons.forEach((button) => {
@@ -794,6 +814,9 @@ function restoreUserSettings() {
 
   // 恢复音效激活状态（但不自动播放）
   updateSoundButtonsState();
+  
+  // 初始化静音按钮状态
+  updateMuteButtonState();
 }
 
 /**
@@ -999,6 +1022,9 @@ function updateVolumeDisplay(volume) {
 
   // 更新音量可视化
   updateVolumeVisualizer(volume);
+  
+  // 更新静音按钮状态
+  updateMuteButtonState();
 }
 
 /**
@@ -1148,11 +1174,18 @@ function updateTimerDisplay(status) {
   if (status.isActive) {
     elements.timerDisplay.textContent = status.remainingTimeFormatted;
     elements.timerStatus.style.display = "block";
-
+    
+    // 无障碍性：更新ARIA标签
+    elements.timerStatus.setAttribute('aria-label', `定时器运行中，剩余时间${status.remainingTimeFormatted}`);
+    
     // 更新圆形进度条
     updateTimerProgress(status.progress || 0);
+    
+    // 无障碍性：定时通知进度变化（仅在特定时间点）
+    announceTimerProgress(status);
   } else {
     elements.timerStatus.style.display = "none";
+    elements.timerStatus.removeAttribute('aria-label');
   }
 }
 
@@ -1169,13 +1202,49 @@ function updateTimerProgress(progress) {
 
   progressBar.style.strokeDashoffset = offset;
 
-  // 根据进度改变颜色
+  // 根据进度改变颜色（使用更平滑的过渡）
   if (progress > 0.7) {
     progressBar.style.stroke = "rgba(56, 161, 105, 0.8)"; // 绿色
+    progressBar.style.filter = "drop-shadow(0 0 8px rgba(56, 161, 105, 0.4))";
   } else if (progress > 0.3) {
     progressBar.style.stroke = "rgba(214, 158, 46, 0.8)"; // 黄色
+    progressBar.style.filter = "drop-shadow(0 0 8px rgba(214, 158, 46, 0.4))";
   } else {
     progressBar.style.stroke = "rgba(229, 62, 62, 0.8)"; // 红色
+    progressBar.style.filter = "drop-shadow(0 0 8px rgba(229, 62, 62, 0.4))";
+  }
+}
+
+/**
+ * 无障碍性：定时器进度通知
+ * @param {Object} status - 定时器状态
+ */
+function announceTimerProgress(status) {
+  const totalMinutes = Math.ceil(status.totalDuration / 60000);
+  const remainingMinutes = Math.ceil(status.remainingTime / 60000);
+  
+  // 仅在特定时间点通知，避免过于频繁
+  const shouldAnnounce = (
+    // 剩余时间为5分钟、2分钟、1分钟时
+    remainingMinutes === 5 || remainingMinutes === 2 || remainingMinutes === 1 ||
+    // 剩余时间为30秒、10秒时
+    status.remainingTime <= 30000 && status.remainingTime > 29000 ||
+    status.remainingTime <= 10000 && status.remainingTime > 9000
+  );
+  
+  if (shouldAnnounce) {
+    let message = '';
+    if (remainingMinutes > 1) {
+      message = `定时器剩余${remainingMinutes}分钟`;
+    } else if (status.remainingTime > 30000) {
+      message = '定时器剩余1分钟';
+    } else if (status.remainingTime > 10000) {
+      message = '定时器剩余30秒';
+    } else {
+      message = '定时器即将结束';
+    }
+    
+    announceAction(message);
   }
 }
 
@@ -1348,6 +1417,11 @@ async function handleSoundButtonClick(event) {
     if (configManager && appState.playingSounds.has(soundName)) {
       configManager.updateRecentSounds(soundName);
     }
+    
+    // 更新配方管理器UI状态
+    if (recipeManager && recipeManager.initialized) {
+      recipeManager.updateUI();
+    }
 
     // 添加涟漪效果
     addRippleEffect(event.currentTarget);
@@ -1449,6 +1523,51 @@ const handleVolumeChange = (function() {
 })();
 
 /**
+ * 处理静音按钮点击事件
+ */
+function handleMuteClick() {
+  try {
+    toggleMute();
+    updateMuteButtonState();
+    
+    // 记录静音操作活动
+    if (configManager) {
+      const isMuted = appState.volume === 0;
+      configManager.addUserActivity('mute_toggle', { muted: isMuted });
+    }
+  } catch (error) {
+    console.error("静音切换失败:", error);
+    if (notificationManager) {
+      notificationManager.showError('静音操作失败，请重试');
+    }
+  }
+}
+
+/**
+ * 更新静音按钮状态
+ */
+function updateMuteButtonState() {
+  if (!elements.muteBtn) return;
+  
+  const isMuted = appState.volume === 0;
+  const muteIcon = elements.muteBtn.querySelector('.mute-icon');
+  
+  if (isMuted) {
+    elements.muteBtn.classList.add('muted');
+    elements.muteBtn.setAttribute('aria-label', '取消静音');
+    if (muteIcon) {
+      muteIcon.textContent = '🔇';
+    }
+  } else {
+    elements.muteBtn.classList.remove('muted');
+    elements.muteBtn.setAttribute('aria-label', '静音');
+    if (muteIcon) {
+      muteIcon.textContent = '🔊';
+    }
+  }
+}
+
+/**
  * 处理定时器按钮点击
  */
 function handleTimerButtonClick(event) {
@@ -1535,6 +1654,19 @@ function startTimer(minutes) {
     if (success) {
       appState.timerActive = true;
       appState.timerDuration = minutes;
+      
+      // 无障碍性：通知定时器启动
+      announceAction(`已启动${minutes}分钟定时器`);
+      
+      // 显示通知（如果有通知管理器）
+      if (notificationManager) {
+        notificationManager.showSuccess(`定时器已设置为${minutes}分钟`);
+      }
+      
+      // 更新配方管理器UI状态
+      if (recipeManager && recipeManager.initialized) {
+        recipeManager.updateUI();
+      }
     } else {
       showErrorMessage("定时器设置失败");
     }
@@ -1568,6 +1700,19 @@ function handleTimerExpired() {
 
     // 重置定时器按钮状态
     elements.timerButtons.forEach((btn) => btn.classList.remove("active"));
+    
+    // 更新配方管理器UI状态
+    if (recipeManager && recipeManager.initialized) {
+      recipeManager.updateUI();
+    }
+    
+    // 无障碍性：通知定时器到期
+    announceAction('定时器已到期，音频已停止播放');
+    
+    // 显示通知（如果有通知管理器）
+    if (notificationManager) {
+      notificationManager.showInfo('🔔 定时器已到期，休息时间！');
+    }
   } catch (error) {
     console.error("处理定时器到期失败:", error);
   }
@@ -1596,50 +1741,209 @@ function handleCancelTimer() {
 
 /**
  * 处理键盘快捷键
+ * 按照蓝图要求增强无障碍性，支持音量微调和全面的键盘导航
  */
 function handleKeyboardShortcuts(event) {
   // 如果正在输入，忽略快捷键
   if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") {
     return;
   }
-
+  
+  // 如果菜单或对话框打开，忽略大部分快捷键
+  const isModalOpen = document.querySelector('.context-menu, .confirmation-modal, .custom-audio-menu[style*="flex"]');
+  
   switch (event.key.toLowerCase()) {
     case "1":
     case "2":
     case "3":
     case "4":
     case "5":
-      const soundIndex = parseInt(event.key) - 1;
-      const soundNames = Object.keys(soundConfig);
-      if (soundIndex >= 0 && soundIndex < soundNames.length) {
-        const soundName = soundNames[soundIndex];
-        const button = document.querySelector(`[data-sound="${soundName}"]`);
-        if (button) {
-          button.click();
+    case "6":
+    case "7":
+      if (!isModalOpen) {
+        const soundIndex = parseInt(event.key) - 1;
+        const currentConfig = modeManager ? modeManager.getCurrentModeConfig() : soundConfig;
+        const soundNames = Object.keys(currentConfig || soundConfig);
+        if (soundIndex >= 0 && soundIndex < soundNames.length) {
+          const soundName = soundNames[soundIndex];
+          const button = document.querySelector(`[data-sound="${soundName}"]`);
+          if (button) {
+            event.preventDefault();
+            button.click();
+            // 无障碍性：通知屏幕阅读器
+            announceAction(`已切换到${button.querySelector('.sound-name')?.textContent || soundName}`);
+          }
         }
       }
       break;
 
     case " ":
     case "spacebar":
+      if (!isModalOpen) {
+        event.preventDefault();
+        elements.playPauseBtn.click();
+        // 无障碍性：通知操作
+        const action = appState.isPlaying ? '已暂停' : '已播放';
+        announceAction(action);
+      }
+      break;
+      
+    case "arrowleft":
+      if (!isModalOpen) {
+        event.preventDefault();
+        // 按照蓝图要求：左箭头减少5%音量
+        adjustVolume(-5);
+      }
+      break;
+      
+    case "arrowright":
+      if (!isModalOpen) {
+        event.preventDefault();
+        // 按照蓝图要求：右箭头增加5%音量
+        adjustVolume(5);
+      }
+      break;
+      
+    case "arrowup":
+      if (!isModalOpen) {
+        event.preventDefault();
+        // 上箭头：增加10%音量
+        adjustVolume(10);
+      }
+      break;
+      
+    case "arrowdown":
+      if (!isModalOpen) {
+        event.preventDefault();
+        // 下箭头：减封10%音量
+        adjustVolume(-10);
+      }
+      break;
+      
+    case "m":
+      if (!isModalOpen) {
+        event.preventDefault();
+        // M键：静音/取消静音
+        toggleMute();
+      }
+      break;
+      
+    case "tab":
+      // 确保 Tab 键可以正常在可聚焦元素间切换
+      // 不阻止默认行为
+      break;
+      
+    case "escape":
+      // ESC 键：关闭所有模态对话框
       event.preventDefault();
-      // 如果有正在播放的音效，暂停它；否则播放第一个音效
-      if (appState.isPlaying && appState.currentSound) {
-        const currentButton = document.querySelector(
-          `[data-sound="${appState.currentSound}"]`
-        );
-        if (currentButton) {
-          currentButton.click();
-        }
-      } else {
-        // 播放第一个音效（海浪声）
-        const firstButton = document.querySelector('[data-sound="waves"]');
-        if (firstButton) {
-          firstButton.click();
-        }
+      closeAllModals();
+      break;
+      
+    case "enter":
+      // Enter 键：在焦点元素上触发点击
+      if (document.activeElement && document.activeElement.classList.contains('sound-btn')) {
+        event.preventDefault();
+        document.activeElement.click();
       }
       break;
   }
+}
+
+/**
+ * 调节音量（无障碍性增强）
+ * @param {number} delta - 音量变化值（-100到100）
+ */
+function adjustVolume(delta) {
+  const newVolume = Math.max(0, Math.min(100, appState.volume + delta));
+  if (newVolume !== appState.volume) {
+    appState.volume = newVolume;
+    elements.volumeSlider.value = newVolume;
+    updateVolumeDisplay(newVolume);
+    audioManager.setMasterVolume(newVolume / 100);
+    saveUserSettings();
+    
+    // 无障碍性：通知音量变化
+    announceAction(`音量已调至${newVolume}%`);
+  }
+}
+
+/**
+ * 静音/取消静音切换
+ */
+function toggleMute() {
+  if (!window.lastVolume) {
+    // 静音
+    window.lastVolume = appState.volume;
+    adjustVolume(-appState.volume); // 设为0
+    announceAction('已静音');
+  } else {
+    // 取消静音
+    const restoreVolume = window.lastVolume - appState.volume;
+    adjustVolume(restoreVolume);
+    window.lastVolume = null;
+    announceAction(`已取消静音，音量为${appState.volume}%`);
+  }
+}
+
+/**
+ * 关闭所有模态对话框
+ */
+function closeAllModals() {
+  // 关闭右键菜单
+  const contextMenu = document.getElementById('sound-context-menu');
+  if (contextMenu) {
+    contextMenu.remove();
+  }
+  
+  // 关闭确认对话框
+  const confirmModal = document.querySelector('.confirmation-modal');
+  if (confirmModal) {
+    confirmModal.remove();
+  }
+  
+  // 关闭自定义音频菜单
+  const customAudioMenu = document.getElementById('custom-audio-menu');
+  if (customAudioMenu && customAudioMenu.style.display !== 'none') {
+    if (modeManager) {
+      modeManager.hideCustomAudioMenu();
+    }
+  }
+}
+
+/**
+ * 无障碍性：向屏幕阅读器通知操作
+ * @param {string} message - 要通知的消息
+ */
+function announceAction(message) {
+  // 创建或获取全局通知区域
+  let announcer = document.getElementById('global-announcer');
+  if (!announcer) {
+    announcer = document.createElement('div');
+    announcer.id = 'global-announcer';
+    announcer.setAttribute('aria-live', 'polite');
+    announcer.setAttribute('aria-atomic', 'true');
+    announcer.className = 'sr-only';
+    announcer.style.cssText = `
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    `;
+    document.body.appendChild(announcer);
+  }
+  
+  // 通知消息
+  announcer.textContent = message;
+  
+  // 清空消息以便下次通知
+  setTimeout(() => {
+    announcer.textContent = '';
+  }, 1000);
 }
 
 /**

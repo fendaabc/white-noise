@@ -47,22 +47,21 @@
         <h1 class="app-title">白噪音</h1>
         
         <!-- 新增：模式切换器 -->
-        <div class="mode-switcher">
+        <div class="mode-switcher" role="group" aria-label="模式切换">
             <div class="mode-toggle-container">
-                <button id="normal-mode-btn" class="mode-btn active" data-mode="normal">
+                <button id="normal-mode-btn" class="mode-btn active" data-mode="normal" aria-pressed="true" tabindex="0">
                     <span class="mode-icon">🌊</span>
                     <span class="mode-name">放松模式</span>
                 </button>
-                <button id="campus-mode-btn" class="mode-btn" data-mode="campus">
+                <button id="campus-mode-btn" class="mode-btn" data-mode="campus" aria-pressed="false" tabindex="0">
                     <span class="mode-icon">🏫</span>
                     <span class="mode-name">学霸模式</span>
                 </button>
-                <div class="mode-indicator"></div>
             </div>
         </div>
         
         <!-- 主播放按钮 -->
-        <button id="play-pause-btn" class="play-button" aria-label="播放/暂停">
+        <button id="play-pause-btn" class="play-button" aria-label="播放/暂停所有音效" tabindex="0">
             播放
         </button>
         
@@ -88,7 +87,10 @@
             <div class="volume-control">
                 <label for="volume-slider">音量</label>
                 <div class="volume-slider-container">
-                    <input type="range" id="volume-slider" min="0" max="100" value="70" class="volume-slider">
+                    <button id="mute-btn" class="mute-btn" aria-label="静音/取消静音" tabindex="0">
+                        <span class="mute-icon">🔊</span>
+                    </button>
+                    <input type="range" id="volume-slider" min="0" max="100" value="70" class="volume-slider" aria-label="音量滑块">
                     <div class="volume-visualizer">
                         <div class="volume-bar"></div>
                         <div class="volume-bar"></div>
@@ -120,15 +122,28 @@
                 </div>
                 
                 <!-- 定时器状态显示 -->
-                <div id="timer-status" class="timer-status" style="display: none;">
+                <div id="timer-status" class="timer-status" style="display: none;" role="timer" aria-live="polite" aria-atomic="true">
                     <div class="timer-progress-container">
-                        <svg class="timer-progress-ring" width="60" height="60">
+                        <svg class="timer-progress-ring" width="60" height="60" role="img" aria-label="定时器进度">
                             <circle class="timer-progress-bg" cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
                             <circle class="timer-progress-bar" cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="3" stroke-linecap="round"/>
                         </svg>
-                        <span id="timer-display">--:--</span>
+                        <span id="timer-display" aria-label="剩余时间">--:--</span>
                     </div>
-                    <button id="cancel-timer">取消</button>
+                    <button id="cancel-timer" aria-label="取消定时器">取消</button>
+                </div>
+            </div>
+            
+            <!-- 学习配方功能 -->
+            <div class="recipe-control">
+                <label>学习配方</label>
+                <div class="recipe-buttons">
+                    <button id="save-recipe-btn" class="recipe-btn primary" aria-label="保存当前混音为配方" disabled>
+                        💾 保存配方
+                    </button>
+                    <button id="recipe-list-btn" class="recipe-btn secondary" aria-label="查看已保存的配方">
+                        📋 配方列表
+                    </button>
                 </div>
             </div>
         </div>
@@ -170,6 +185,55 @@
         <div class="menu-overlay"></div>
     </div>
     
+    <!-- 保存配方弹窗 -->
+    <div id="save-recipe-modal" class="recipe-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>保存学习配方</h3>
+                <button id="close-save-modal" class="close-btn" aria-label="关闭弹窗">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="recipe-preview">
+                    <h4>当前混音组合：</h4>
+                    <div id="current-mix-preview" class="mix-preview">
+                        <!-- 当前混音组合将在这里显示 -->
+                    </div>
+                    <div class="timer-preview">
+                        <span id="current-timer-preview">定时器：未设置</span>
+                    </div>
+                </div>
+                <div class="recipe-form">
+                    <label for="recipe-name">配方名称：</label>
+                    <input type="text" id="recipe-name" placeholder="请输入配方名称（如：深度专注模式）" maxlength="20">
+                    <div class="form-buttons">
+                        <button id="confirm-save-recipe" class="btn primary" disabled>保存</button>
+                        <button id="cancel-save-recipe" class="btn secondary">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+    
+    <!-- 配方列表弹窗 -->
+    <div id="recipe-list-modal" class="recipe-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>我的学习配方</h3>
+                <button id="close-list-modal" class="close-btn" aria-label="关闭弹窗">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="recipe-list-container" class="recipe-list-container">
+                    <!-- 配方列表将在这里显示 -->
+                </div>
+                <div class="list-actions">
+                    <button id="close-recipe-list" class="btn secondary">关闭</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-overlay"></div>
+    </div>
+    
     <!-- 错误提示 -->
     <div id="error-message" class="error-message" style="display: none;">
         <p id="error-text"></p>
@@ -185,6 +249,7 @@
     <script src="js/UniversalAudioManager.js"></script>
     <script src="js/SoundButtonGenerator.js"></script>
     <script src="js/ModeManager.js"></script>
+    <script src="js/RecipeManager.js"></script>
     <script src="js/SkeletonManager.js"></script>
     <script src="js/ErrorRecoveryManager.js"></script>
     <script src="js/LoadingOrchestrator.js"></script>

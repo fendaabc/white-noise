@@ -9,8 +9,7 @@ const campusSoundConfig = {
   headTeacher: {
     path: "audio/campus/head-teacher.mp3", // 这将是默认音频，用户可以替换
     name: "班主任",
-    icon: "👨‍🏫",
-    category: "classroom",
+    icon: "👔", // 统一为线性图标风格
     type: "standard", // 标准音频文件，支持用户自定义
     description: "整栋楼就你们班最吵！看我干嘛？我脸上有答案？",
     defaultContent: [
@@ -25,8 +24,7 @@ const campusSoundConfig = {
   mathTeacher: {
     path: "audio/campus/math-teacher.mp3",
     name: "数学老师",
-    icon: "📐",
-    category: "classroom",
+    icon: "📏", // 统一线性风格：尺子
     type: "standard",
     description: "这又是一道送分题！看懂了吗？好，我们看下一题",
     defaultContent: [
@@ -41,8 +39,7 @@ const campusSoundConfig = {
   chineseTeacher: {
     path: "audio/campus/chinese-teacher.mp3",
     name: "语文老师",
-    icon: "📖",
-    category: "classroom",
+    icon: "📝", // 统一线性风格：笔记
     type: "standard",
     description: "全文背诵！请同学们有感情地朗读课文",
     defaultContent: [
@@ -57,8 +54,7 @@ const campusSoundConfig = {
   englishTeacher: {
     path: "audio/campus/english-teacher.mp3",
     name: "英语老师",
-    icon: "🔤",
-    category: "classroom",
+    icon: "🌐", // 统一线性风格：地球
     type: "standard",
     description: "OK, class. Read after me... Apple!",
     defaultContent: [
@@ -73,8 +69,7 @@ const campusSoundConfig = {
   physicsTeacher: {
     path: "audio/campus/physics-teacher.mp3",
     name: "物理老师",
-    icon: "⚛️",
-    category: "classroom",
+    icon: "🔬", // 统一线性风格：显微镜
     type: "standard",
     description: "根据牛顿第二定律...这个实验现象说明了什么？",
     defaultContent: [
@@ -91,7 +86,6 @@ const campusSoundConfig = {
     path: "audio/campus/school-bell.mp3",
     name: "下课铃声",
     icon: "🔔",
-    category: "campus-life",
     type: "standard",
     description: "经典的校园电铃声，唤起无数回忆",
     loop: true
@@ -100,8 +94,7 @@ const campusSoundConfig = {
   morningExercise: {
     path: "audio/campus/morning-exercise.mp3",
     name: "课间操",
-    icon: "🤸",
-    category: "campus-life",
+    icon: "🏃", // 统一线性风格：跑步
     type: "standard",
     description: "时代在召唤，青春正飞扬...",
     defaultContent: [
@@ -115,8 +108,7 @@ const campusSoundConfig = {
   sportsDay: {
     path: "audio/campus/sports-day.mp3",
     name: "运动会",
-    icon: "🏃",
-    category: "campus-life",
+    icon: "🏆", // 统一线性风格：奖杯
     type: "standard",
     description: "发令枪响、加油呐喊声，青春的激情",
     defaultContent: [
@@ -131,8 +123,7 @@ const campusSoundConfig = {
   eveningStudy: {
     path: "audio/campus/evening-study.mp3",
     name: "晚自习",
-    icon: "✍️",
-    category: "campus-life",
+    icon: "🕯️", // 统一线性风格：蜡烛
     type: "standard",
     description: "安静的学习氛围，翻书声、写字声、咳嗽声",
     ambientSounds: [
@@ -146,8 +137,7 @@ const campusSoundConfig = {
   dormTalk: {
     path: "audio/campus/dorm-talk.mp3",
     name: "宿舍夜话",
-    icon: "🤫",
-    category: "campus-life",
+    icon: "🌙", // 统一线性风格：月亮
     type: "standard",
     description: "熄灯后的窃窃私语和憋笑声",
     ambientSounds: [
@@ -162,8 +152,7 @@ const campusSoundConfig = {
   canteen: {
     path: "audio/campus/canteen.mp3",
     name: "小卖部",
-    icon: "🏪",
-    category: "leisure",
+    icon: "🏬", // 统一线性风格：商店
     type: "standard",
     description: "课间休息的热闹，撕开零食包装的声音",
     ambientSounds: [
@@ -177,8 +166,7 @@ const campusSoundConfig = {
   arcadeHall: {
     path: "audio/campus/arcade-hall.mp3",
     name: "游戏厅",
-    icon: "🕹️",
-    category: "leisure",
+    icon: "🕹️", // 统一线性风格：游戏手柄
     type: "standard",
     description: "90年代怀旧，拳皇、街霸的背景音乐",
     ambientSounds: [
@@ -194,7 +182,6 @@ const campusSoundConfig = {
     path: "audio/campus/exam-room.mp3",
     name: "考试铃声",
     icon: "📝",
-    category: "exam",
     type: "standard",
     description: "考试开始和结束的铃声，紧张感满满",
     variants: ["开始考试", "还剩30分钟", "考试结束"]
@@ -204,7 +191,6 @@ const campusSoundConfig = {
     path: "audio/campus/library.mp3",
     name: "图书馆",
     icon: "📚",
-    category: "study",
     type: "standard",
     description: "安静的学习氛围，偶尔的翻页声",
     ambientSounds: [
@@ -257,35 +243,6 @@ const campusModeConfig = {
     buttonHover: "bounce", // 按钮悬停效果
     iconRotation: true, // 图标旋转效果
     particleSystem: "notebooks" // 粒子系统：笔记本、铅笔等
-  },
-
-  // 音效分类
-  categories: {
-    classroom: {
-      name: "课堂宇宙",
-      icon: "🏫",
-      description: "各科老师的经典语录"
-    },
-    "campus-life": {
-      name: "校园生活", 
-      icon: "🎒",
-      description: "校园日常的声音记忆"
-    },
-    leisure: {
-      name: "摸鱼时光",
-      icon: "🎮", 
-      description: "课余时间的快乐回忆"
-    },
-    exam: {
-      name: "考试周",
-      icon: "📝",
-      description: "紧张刺激的考试氛围"
-    },
-    study: {
-      name: "学习专区",
-      icon: "📚",
-      description: "专注学习的环境音"
-    }
   }
 };
 

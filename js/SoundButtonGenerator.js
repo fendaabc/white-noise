@@ -145,27 +145,12 @@ class SoundButtonGenerator {
         playIndicator.className = 'play-indicator';
         playIndicator.textContent = '▶';
 
-        // 添加编辑按钮（仅校园模式显示）
-        let editBtn = null;
-        if (this.currentMode === 'campus') {
-            editBtn = document.createElement('button');
-            editBtn.className = 'edit-btn';
-            editBtn.setAttribute('data-sound', soundKey);
-            editBtn.setAttribute('aria-label', `编辑 ${soundConfig.name}`);
-            editBtn.innerHTML = '✏️';
-            editBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.handleEditClick(e);
-            });
-        }
+        // 编辑功能已统一到右键/长按菜单中，不再显示悬浮编辑按钮
 
         // 组装按钮
         button.appendChild(soundIcon);
         button.appendChild(soundName);
         button.appendChild(playIndicator);
-        if (editBtn) {
-            button.appendChild(editBtn);
-        }
 
         // 添加长按和右键菜单功能
         this.addAdvancedInteractions(button, soundKey, soundConfig);
@@ -258,7 +243,7 @@ class SoundButtonGenerator {
         const isCustom = this.isCustomSound(soundKey);
         const soundName = soundConfig.name || soundKey;
         
-        // 菜单选项
+        // 菜单选项（按照蓝图优化顺序）
         const menuItems = [
             {
                 icon: '🎧',
@@ -274,32 +259,32 @@ class SoundButtonGenerator {
         
         // 校园模式下的附加选项
         if (this.currentMode === 'campus') {
+            menuItems.push({
+                icon: '✏️',
+                text: '自定义音频',
+                action: () => this.editSound(soundKey)
+            });
+        }
+        
+        // 查看详情
+        menuItems.push({
+            icon: 'ℹ️',
+            text: '查看详情',
+            action: () => this.showSoundInfo(soundKey, soundConfig)
+        });
+        
+        // 分割线和危险操作（仅在有自定义音效时显示）
+        if (isCustom) {
             menuItems.push(
                 { separator: true },
                 {
-                    icon: '✏️',
-                    text: '自定义音频',
-                    action: () => this.editSound(soundKey)
+                    icon: '🔄',
+                    text: '还原默认',
+                    action: () => this.resetSoundWithConfirmation(soundKey),
+                    dangerous: true // 标记为危险操作
                 }
             );
-            
-            if (isCustom) {
-                menuItems.push({
-                    icon: '🔄',
-                    text: '重置为默认',
-                    action: () => this.resetSound(soundKey)
-                });
-            }
         }
-        
-        menuItems.push(
-            { separator: true },
-            {
-                icon: 'ℹ️',
-                text: '查看信息',
-                action: () => this.showSoundInfo(soundKey, soundConfig)
-            }
-        );
         
         // 生成菜单HTML
         menu.innerHTML = `
@@ -312,8 +297,9 @@ class SoundButtonGenerator {
                     if (item.separator) {
                         return '<div class="menu-separator"></div>';
                     }
+                    const dangerousClass = item.dangerous ? ' dangerous' : '';
                     return `
-                        <div class="menu-item" data-action="${item.text}">
+                        <div class="menu-item${dangerousClass}" data-action="${item.text}">
                             <span class="menu-item-icon">${item.icon}</span>
                             <span class="menu-item-text">${item.text}</span>
                         </div>
@@ -806,6 +792,74 @@ class SoundButtonGenerator {
                 }, 300);
             }, 50);
         }, 300);
+    }
+
+    /**
+     * 带确认对话框的重置音效功能
+     * @param {string} soundKey - 音效键名
+     */
+    resetSoundWithConfirmation(soundKey) {
+        const soundConfig = this.getCurrentModeConfig()[soundKey];
+        const soundName = soundConfig ? soundConfig.name : soundKey;
+        
+        // 创建确认对话框
+        const modal = document.createElement('div');
+        modal.className = 'confirmation-modal';
+        modal.innerHTML = `
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>确认重置</h3>
+                </div>
+                <div class="modal-body">
+                    <p>确定要将「${soundName}」重置为默认音效吗？</p>
+                    <p class="warning-text">此操作将删除您上传的自定义音频，且无法撤销。</p>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" type="button">取消</button>
+                    <button class="btn-confirm dangerous" type="button">确认重置</button>
+                </div>
+            </div>
+        `;
+        
+        // 事件处理
+        const closeModal = () => {
+            modal.remove();
+        };
+        
+        const cancelBtn = modal.querySelector('.btn-cancel');
+        const confirmBtn = modal.querySelector('.btn-confirm');
+        const backdrop = modal.querySelector('.modal-backdrop');
+        
+        // 默认焦点在取消按钮上（安全选择）
+        setTimeout(() => {
+            cancelBtn.focus();
+        }, 100);
+        
+        // 事件监听
+        cancelBtn.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', closeModal);
+        
+        confirmBtn.addEventListener('click', () => {
+            // 执行实际的重置操作
+            this.resetSound(soundKey);
+            closeModal();
+        });
+        
+        // 键盘事件
+        modal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+        
+        // 添加到页面
+        document.body.appendChild(modal);
+        
+        // 添加显示动画
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+        });
     }
 
     /**

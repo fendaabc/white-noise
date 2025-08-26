@@ -9,10 +9,9 @@ class ModeManager {
         this.localStorageManager = null;
         this.audioManager = null;
         
-        // UI元素引用
+        // UI元素引用（已移除mode-indicator）
         this.normalModeBtn = null;
         this.campusModeBtn = null;
-        this.modeIndicator = null;
         this.modeContainer = null;
         this.customAudioMenu = null;
         this.audioFilePicker = null;
@@ -72,7 +71,6 @@ class ModeManager {
     initUIElements() {
         this.normalModeBtn = document.getElementById('normal-mode-btn');
         this.campusModeBtn = document.getElementById('campus-mode-btn');
-        this.modeIndicator = document.querySelector('.mode-indicator');
         this.modeContainer = document.querySelector('.mode-toggle-container');
         this.customAudioMenu = document.getElementById('custom-audio-menu');
         this.audioFilePicker = document.getElementById('audio-file-picker');
@@ -81,7 +79,6 @@ class ModeManager {
         const requiredElements = {
             normalModeBtn: this.normalModeBtn,
             campusModeBtn: this.campusModeBtn,
-            modeIndicator: this.modeIndicator,
             modeContainer: this.modeContainer
         };
         
@@ -151,9 +148,8 @@ class ModeManager {
         this.isAnimating = true;
         
         try {
-            // 更新UI状态
+            // 更新UI状态（使用淡入淡出效果）
             this.updateModeButtons(mode);
-            this.updateModeIndicator(mode);
             this.updateBodyClass(mode);
             
             // 动画切换音效按钮
@@ -204,18 +200,6 @@ class ModeManager {
     }
 
     /**
-     * 更新模式指示器位置
-     * @param {string} mode - 目标模式
-     */
-    updateModeIndicator(mode) {
-        if (mode === 'campus') {
-            this.modeContainer.classList.add('campus-mode');
-        } else {
-            this.modeContainer.classList.remove('campus-mode');
-        }
-    }
-
-    /**
      * 更新body的CSS类
      * @param {string} mode - 目标模式
      */
@@ -231,7 +215,6 @@ class ModeManager {
     restoreMode(mode) {
         this.currentMode = mode;
         this.updateModeButtons(mode);
-        this.updateModeIndicator(mode);
         this.updateBodyClass(mode);
         
         // 生成对应模式的音效按钮
