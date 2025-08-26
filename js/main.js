@@ -11,6 +11,14 @@ let loadingOrchestrator;
 let errorRecoveryManager;
 let appState;
 
+// 新增：新的管理器实例
+let localStorageManager;
+let soundButtonGenerator;
+let modeManager;
+let configManager; // 新增配置管理器
+let notificationManager; // 新增通知管理器
+let performanceOptimizer; // 新增性能优化器
+
 // 抑制浏览器扩展相关的错误提示
 window.addEventListener('error', function(e) {
   if (e.message && e.message.includes('runtime.lastError')) {
@@ -27,7 +35,7 @@ window.addEventListener('unhandledrejection', function(e) {
   }
 });
 
-// 将关键函数暴露到全局作用域，供LoadingOrchestrator调用
+// 将关键函数暴露到全局作用域，供LoadingOrchestrator和ModeManager调用
 window.initDOMElements = initDOMElements;
 window.initManagers = initManagers;
 window.bindEventListeners = bindEventListeners;
@@ -36,6 +44,7 @@ window.restoreUserSettings = restoreUserSettings;
 window.initBackgroundSlideshow = initBackgroundSlideshow;
 window.warmupFrequentlyUsedSounds = warmupFrequentlyUsedSounds;
 window.loadAudioFiles = loadAudioFiles;
+window.handleSoundButtonClick = handleSoundButtonClick; // 供ModeManager调用
 
 // 音效配置 - 使用HLS流媒体
 const soundConfig = {
@@ -81,6 +90,9 @@ const soundConfig = {
   },
 };
 
+// 将soundConfig设为全局变量，供其他模块访问
+window.soundConfig = soundConfig;
+
 // 应用状态
 const defaultState = {
   isPlaying: false,
@@ -89,6 +101,19 @@ const defaultState = {
   timerActive: false,
   timerDuration: 0,
   settingsPanelVisible: false,
+  
+  // 新增：模式管理
+  currentMode: 'normal', // 'normal' | 'campus'
+  
+  // 新增：自定义音频管理
+  customSounds: {}, // 自定义音频配置
+  
+  // 新增：UI状态
+  uiState: {
+    isModeSwitching: false,
+    showCustomizeMenu: false,
+    selectedSoundForCustomize: null
+  }
 };
 
 // DOM元素引用
@@ -131,7 +156,7 @@ async function initApp() {
     }
 
     // 初始化状态
-    initAppState();
+    await initAppState();
 
     // 使用加载编排器管理加载流程
     await loadingOrchestrator.startLoading({
@@ -164,21 +189,62 @@ async function initApp() {
 /**
  * 初始化应用状态
  */
-function initAppState() {
-  appState = { ...defaultState };
-
-  // 从localStorage恢复设置
-  const savedSettings = localStorage.getItem("whiteNoiseSettings");
-  if (savedSettings) {
-    try {
-      const settings = JSON.parse(savedSettings);
-      appState.volume = settings.volume || defaultState.volume;
-      if (settings.playingSounds && Array.isArray(settings.playingSounds)) {
-        appState.playingSounds = new Set(settings.playingSounds);
+async function initAppState() {
+  // 初始化配置管理器
+  try {
+    configManager = new ConfigManager();
+    const config = await configManager.init();
+    
+    // 从配置中初始化应用状态
+    appState = {
+      ...defaultState,
+      ...config.settings
+    };
+    
+    // 增加会话计数
+    configManager.incrementSessionCount();
+    
+    console.log('应用状态初始化完成:', {
+      mode: appState.currentMode,
+      customSoundsCount: Object.keys(appState.customSounds).length,
+      volume: appState.volume,
+      totalSessions: config.usage.totalSessions
+    });
+    
+  } catch (error) {
+    console.error('初始化配置管理器失败:', error);
+    
+    // 回退到传统方式
+    appState = { ...defaultState };
+    
+    // 从localStorage恢复设置
+    const savedSettings = localStorage.getItem("whiteNoiseSettings");
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        
+        // 恢复基本设置
+        appState.volume = settings.volume || defaultState.volume;
+        if (settings.playingSounds && Array.isArray(settings.playingSounds)) {
+          appState.playingSounds = new Set(settings.playingSounds);
+        }
+        
+        // 恢复模式设置
+        if (settings.currentMode && ['normal', 'campus'].includes(settings.currentMode)) {
+          appState.currentMode = settings.currentMode;
+        }
+        
+        // 恢复自定义音频设置
+        if (settings.customSounds && typeof settings.customSounds === 'object') {
+          appState.customSounds = { ...settings.customSounds };
+        }
+        
+      } catch (error) {
+        console.warn("恢复用户设置失败:", error);
       }
-    } catch (error) {
-      console.warn("恢复用户设置失败:", error);
     }
+    
+    console.log('使用传统方式初始化应用状态');
   }
 }
 
@@ -217,13 +283,57 @@ function initDOMElements() {
  * 初始化管理器
  */
 async function initManagers() {
-  // 创建 HlsAudioManager 实例
-  audioManager = new HlsAudioManager();
+  // 初始化性能优化器（最先初始化，监控整个初始化过程）
+  try {
+    performanceOptimizer = new PerformanceOptimizer();
+    window.performanceOptimizer = performanceOptimizer;
+    console.log('性能优化器初始化成功');
+  } catch (error) {
+    console.error('初始化PerformanceOptimizer失败:', error);
+    // 即使性能优化器初始化失败，也要继续其他初始化
+  }
+  
+  // 初始化通知管理器（优先初始化，以便其他管理器可以使用）
+  try {
+    notificationManager = new NotificationManager();
+    window.notificationManager = notificationManager;
+    console.log('通知管理器初始化成功');
+  } catch (error) {
+    console.error('初始化NotificationManager失败:', error);
+    // 即使通知管理器初始化失败，也要继续其他初始化
+  }
+  
+  // 从配置管理器恢复会话状态（如果可用）
+  if (configManager) {
+    const preferences = configManager.getPreferences();
+    const cache = configManager.getCache();
+    
+    // 恢复用户偏好设置
+    if (preferences.animationsEnabled === false) {
+      document.body.classList.add('reduce-motion');
+    }
+    
+    // 恢复最近使用的音效列表（为后续快速访问做准备）
+    if (cache.recentlyUsedSounds && cache.recentlyUsedSounds.length > 0) {
+      console.log('恢复最近使用的音效:', cache.recentlyUsedSounds);
+    }
+  }
+  // 创建 UniversalAudioManager 实例（替换原有的HlsAudioManager）
+  audioManager = new UniversalAudioManager();
   await audioManager.init();
   
-  // 设置音频配置
-  if (typeof audioManager.setSoundConfigs === 'function') {
-    audioManager.setSoundConfigs(soundConfig);
+  // 设置常规模式的音频配置
+  if (typeof audioManager.setModeConfigs === 'function') {
+    audioManager.setModeConfigs('normal', soundConfig);
+    // 设置校园模式的音频配置
+    if (typeof campusSoundConfig !== 'undefined') {
+      audioManager.setModeConfigs('campus', campusSoundConfig);
+    }
+  }
+  
+  // 设置初始模式
+  if (typeof audioManager.setCurrentMode === 'function') {
+    audioManager.setCurrentMode(appState.currentMode || 'normal');
   }
 
   // 注入错误恢复管理器
@@ -249,6 +359,94 @@ async function initManagers() {
 
   // 初始化TimerManager
   timerManager = new TimerManager();
+  
+  // 初始化LocalStorageManager
+  try {
+    localStorageManager = new LocalStorageManager();
+    await localStorageManager.init();
+    
+    // 恢复自定义音频配置
+    const customSounds = localStorageManager.getCustomSoundsConfig();
+    if (customSounds && Object.keys(customSounds).length > 0) {
+      Object.entries(customSounds).forEach(([soundKey, config]) => {
+        if (config.type === 'local') {
+          // 创建 Blob URL
+          const blobUrl = localStorageManager.createBlobUrl(soundKey);
+          if (blobUrl) {
+            audioManager.setCustomSound(soundKey, {
+              type: 'local',
+              path: blobUrl,
+              fileName: config.fileName
+            });
+          }
+        }
+      });
+      
+      // 更新应用状态
+      appState.customSounds = customSounds;
+    }
+    
+    window.localStorageManager = localStorageManager;
+  } catch (error) {
+    console.error('初始化LocalStorageManager失败:', error);
+  }
+  
+  // 初始SoundButtonGenerator
+  try {
+    soundButtonGenerator = new SoundButtonGenerator();
+    
+    // 设置自定义音频配置（如果有的话）
+    if (appState.customSounds && Object.keys(appState.customSounds).length > 0) {
+      soundButtonGenerator.setCustomSounds(appState.customSounds);
+    }
+    
+    window.soundButtonGenerator = soundButtonGenerator;
+  } catch (error) {
+    console.error('初始化SoundButtonGenerator失败:', error);
+  }
+  
+  // 初始化ModeManager
+  try {
+    modeManager = new ModeManager();
+    await modeManager.init({
+      soundButtonGenerator: soundButtonGenerator,
+      localStorageManager: localStorageManager,
+      audioManager: audioManager,
+      initialMode: appState.currentMode
+    });
+    
+    // 设置模式变更回调
+    modeManager.setModeChangeCallback((newMode, oldMode) => {
+      appState.currentMode = newMode;
+      saveUserSettings();
+      console.log(`模式变更: ${oldMode} -> ${newMode}`);
+    });
+    
+    // 设置自定义音频回调
+    modeManager.setCustomAudioCallback((soundKey, result) => {
+      if (result) {
+        appState.customSounds[soundKey] = {
+          type: 'local',
+          fileName: result.fileName,
+          fileSize: result.fileSize,
+          timestamp: Date.now()
+        };
+      } else {
+        delete appState.customSounds[soundKey];
+      }
+      
+      // 更新SoundButtonGenerator的自定义音频配置
+      if (soundButtonGenerator) {
+        soundButtonGenerator.setCustomSounds(appState.customSounds);
+      }
+      
+      saveUserSettings();
+    });
+    
+    window.modeManager = modeManager;
+  } catch (error) {
+    console.error('初始化ModeManager失败:', error);
+  }
 }
 
 /**
@@ -319,7 +517,13 @@ function handleAudioLoadingError(errorInfo) {
   
   // 如果重试次数用完，显示错误提示
   if (retryCount >= audioManager.maxRetries) {
-    showErrorMessage(`音频 "${soundConfig[name]?.name || name}" 加载失败`);
+    const soundName = soundConfig[name]?.name || name;
+    
+    if (notificationManager) {
+      notificationManager.showAudioPlayError(soundName, '加载失败');
+    } else {
+      showErrorMessage(`音频 "${soundName}" 加载失败`);
+    }
   }
 }
 
@@ -377,9 +581,13 @@ function bindEventListeners() {
   // 播放/暂停按钮
   elements.playPauseBtn.addEventListener("click", handlePlayPauseClick);
 
-  // 音效选择按钮（现在支持多音效叠加）
+  // 音效选择按钮现在由ModeManager管理，不需要直接绑定
+  // 原有的静态按钮保持兼容性（如果有的话）
   elements.soundButtons.forEach((button) => {
-    button.addEventListener("click", handleSoundButtonClick);
+    if (!button.closest('#sound-list')) {
+      // 只为不在动态列表中的按钮绑定事件
+      button.addEventListener("click", handleSoundButtonClick);
+    }
   });
 
   // 音量控制
@@ -490,16 +698,70 @@ async function warmupFrequentlyUsedSounds(names = null, delayMs = 2000) {
     }
 
     console.log(`🔥 开始预热音效: ${list.join(', ')}`);
-    for (const name of list) {
-      // 确保清单已加载
-      await ensureSoundLoaded(name);
-      // 调用新的预缓冲方法
-      if (audioManager && typeof audioManager.prebufferSound === 'function') {
-        audioManager.prebufferSound(name);
+    
+    // 使用PerformanceOptimizer进行优化的音频预加载
+    if (performanceOptimizer && performanceOptimizer.audioOptimizer) {
+      for (const name of list) {
+        try {
+          // 获取音频URL
+          let audioUrl = null;
+          
+          // 检查是否为自定义音频
+          if (appState.customSounds && appState.customSounds[name]) {
+            const customConfig = appState.customSounds[name];
+            if (customConfig.type === 'local' && localStorageManager) {
+              audioUrl = localStorageManager.createBlobUrl(name);
+            }
+          } else {
+            // 使用配置中的音频
+            const currentConfig = audioManager.getCurrentModeConfig();
+            if (currentConfig && currentConfig[name]) {
+              audioUrl = currentConfig[name].path;
+            }
+          }
+          
+          if (audioUrl) {
+            // 使用性能优化器预加载
+            performanceOptimizer.audioOptimizer.preloadAudio(audioUrl, 'high');
+            console.log(`✅ 已预加载音效: ${name}`);
+          }
+          
+          // 确保清单已加载（备用方法）
+          await ensureSoundLoaded(name);
+          
+          // 调用音频管理器的预缓冲方法
+          if (audioManager && typeof audioManager.prebufferSound === 'function') {
+            audioManager.prebufferSound(name);
+          }
+        } catch (error) {
+          console.warn(`预热音效 ${name} 失败:`, error);
+        }
+      }
+    } else {
+      // 备用的传统预热方法
+      for (const name of list) {
+        try {
+          await ensureSoundLoaded(name);
+          if (audioManager && typeof audioManager.prebufferSound === 'function') {
+            audioManager.prebufferSound(name);
+          }
+        } catch (error) {
+          console.warn(`传统方式预热音效 ${name} 失败:`, error);
+        }
       }
     }
+    
+    // 记录预热活动
+    if (configManager) {
+      configManager.addUserActivity('warmup_sounds', { sounds: list });
+    }
+    
+    console.log('🎉 音效预热完成');
   } catch (e) {
     console.warn('常用音效预热失败:', e);
+    if (notificationManager) {
+      notificationManager.showWarning('音效预热失败，可能影响播放性能');
+    }
   }
 }
 
@@ -523,10 +785,30 @@ function saveUserSettings() {
   const settings = {
     volume: appState.volume,
     playingSounds: Array.from(appState.playingSounds),
+    // 新增：保存模式和自定义音频设置
+    currentMode: appState.currentMode,
+    customSounds: appState.customSounds
   };
 
   try {
+    // 优先使用 ConfigManager
+    if (configManager && typeof configManager.updateSettings === 'function') {
+      const success = configManager.updateSettings(settings);
+      if (success) {
+        console.log('用户设置已保存（ConfigManager）:', {
+          mode: settings.currentMode,
+          customSoundsCount: Object.keys(settings.customSounds).length
+        });
+        return;
+      }
+    }
+    
+    // 回退到传统方式
     localStorage.setItem("whiteNoiseSettings", JSON.stringify(settings));
+    console.log('用户设置已保存（传统方式）:', {
+      mode: settings.currentMode,
+      customSoundsCount: Object.keys(settings.customSounds).length
+    });
   } catch (error) {
     console.warn("保存用户设置失败:", error);
   }
@@ -538,12 +820,46 @@ function saveUserSettings() {
  * 显示错误消息
  */
 function showErrorMessage(message) {
+  // 优先使用NotificationManager
+  if (notificationManager) {
+    notificationManager.showError(message);
+    return;
+  }
+  
+  // 回退到传统方式
   if (elements.errorMessage && elements.errorText) {
     elements.errorText.textContent = message;
     elements.errorMessage.style.display = "block";
 
     // 5秒后自动隐藏
     setTimeout(hideErrorMessage, 5000);
+  }
+}
+
+/**
+ * 显示成功消息
+ */
+function showSuccessMessage(message) {
+  if (notificationManager) {
+    notificationManager.showSuccess(message);
+  }
+}
+
+/**
+ * 显示警告消息
+ */
+function showWarningMessage(message) {
+  if (notificationManager) {
+    notificationManager.showWarning(message);
+  }
+}
+
+/**
+ * 显示信息消息
+ */
+function showInfoMessage(message) {
+  if (notificationManager) {
+    notificationManager.showInfo(message);
   }
 }
 
@@ -761,6 +1077,7 @@ function updatePlayButtonState() {
  * 更新音效按钮状态
  */
 function updateSoundButtonsState() {
+  // 更新传统的静态按钮（如果有的话）
   elements.soundButtons.forEach((button) => {
     const soundName = button.dataset.sound;
     if (appState.playingSounds.has(soundName)) {
@@ -771,6 +1088,11 @@ function updateSoundButtonsState() {
       button.classList.remove("playing");
     }
   });
+  
+  // 通过ModeManager更新动态生成的按钮状态
+  if (window.modeManager && typeof window.modeManager.updateButtonStates === 'function') {
+    window.modeManager.updateButtonStates(appState.playingSounds);
+  }
 }
 
 /**
@@ -1003,6 +1325,11 @@ async function handleSoundButtonClick(event) {
     updatePlayButtonState();
     updateSoundButtonsState();
     saveUserSettings();
+    
+    // 更新使用统计（如果有ConfigManager）
+    if (configManager && appState.playingSounds.has(soundName)) {
+      configManager.updateRecentSounds(soundName);
+    }
 
     // 添加涟漪效果
     addRippleEffect(event.currentTarget);
@@ -1053,25 +1380,55 @@ function handleSettingsPanelClick(event) {
 }
 
 /**
- * 处理音量变化（使用防抖优化）
+ * 处理音量变化（使用性能优化器的防抖功能）
  */
-const handleVolumeChange = debounce(function (event) {
-  try {
-    const volume = parseInt(event.target.value);
-    appState.volume = volume;
+const handleVolumeChange = (function() {
+  let debouncedFunction;
+  
+  // 使用PerformanceOptimizer的防抖功能（如果可用），否则使用本地实现
+  if (performanceOptimizer && typeof performanceOptimizer.debounce === 'function') {
+    debouncedFunction = performanceOptimizer.debounce(function (event) {
+      try {
+        const volume = parseInt(event.target.value);
+        appState.volume = volume;
 
-    // 更新显示
-    updateVolumeDisplay(volume);
+        // 更新显示
+        updateVolumeDisplay(volume);
 
-    // 设置音频音量
-    audioManager.setMasterVolume(volume / 100);
+        // 设置音频音量
+        audioManager.setMasterVolume(volume / 100);
 
-    // 保存设置
-    saveUserSettings();
-  } catch (error) {
-    console.error("音量调节失败:", error);
+        // 保存设置
+        saveUserSettings();
+        
+        // 记录音量调整活动
+        if (configManager) {
+          configManager.addUserActivity('volume_adjustment', { volume });
+        }
+      } catch (error) {
+        console.error("音量调节失败:", error);
+        if (notificationManager) {
+          notificationManager.showError('音量调节失败，请重试');
+        }
+      }
+    }, 100);
+  } else {
+    // 备用的本地防抖实现
+    debouncedFunction = debounce(function (event) {
+      try {
+        const volume = parseInt(event.target.value);
+        appState.volume = volume;
+        updateVolumeDisplay(volume);
+        audioManager.setMasterVolume(volume / 100);
+        saveUserSettings();
+      } catch (error) {
+        console.error("音量调节失败:", error);
+      }
+    }, 100);
   }
-}, 100); // 100ms防抖
+  
+  return debouncedFunction;
+})();
 
 /**
  * 处理定时器按钮点击
@@ -1913,9 +2270,15 @@ function resetBackgroundTheme() {
 // ==================== 工具函数 ====================
 
 /**
- * 防抖函数
+ * 防抖函数（备用实现，优先使用PerformanceOptimizer的版本）
  */
 function debounce(func, wait) {
+  // 如果PerformanceOptimizer可用，使用其防抖功能
+  if (window.performanceOptimizer && typeof window.performanceOptimizer.debounce === 'function') {
+    return window.performanceOptimizer.debounce(func, wait);
+  }
+  
+  // 备用实现
   let timeout;
   return function executedFunction(...args) {
     const later = () => {
@@ -1928,9 +2291,15 @@ function debounce(func, wait) {
 }
 
 /**
- * 节流函数
+ * 节流函数（备用实现，优先使用PerformanceOptimizer的版本）
  */
 function throttle(func, limit) {
+  // 如果PerformanceOptimizer可用，使用其节流功能
+  if (window.performanceOptimizer && typeof window.performanceOptimizer.throttle === 'function') {
+    return window.performanceOptimizer.throttle(func, limit);
+  }
+  
+  // 备用实现
   let inThrottle;
   return function () {
     const args = arguments;

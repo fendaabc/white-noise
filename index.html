@@ -46,6 +46,21 @@
         <!-- 页面标题 -->
         <h1 class="app-title">白噪音</h1>
         
+        <!-- 新增：模式切换器 -->
+        <div class="mode-switcher">
+            <div class="mode-toggle-container">
+                <button id="normal-mode-btn" class="mode-btn active" data-mode="normal">
+                    <span class="mode-icon">🌊</span>
+                    <span class="mode-name">放松模式</span>
+                </button>
+                <button id="campus-mode-btn" class="mode-btn" data-mode="campus">
+                    <span class="mode-icon">🏫</span>
+                    <span class="mode-name">学霸模式</span>
+                </button>
+                <div class="mode-indicator"></div>
+            </div>
+        </div>
+        
         <!-- 主播放按钮 -->
         <button id="play-pause-btn" class="play-button" aria-label="播放/暂停">
             播放
@@ -58,7 +73,7 @@
             
             <!-- 声音列表容器 -->
             <div class="sound-list-container" role="region" aria-label="声音选择列表">
-                <div class="sound-list">
+                <div id="sound-list" class="sound-list">
                     <button class="sound-btn" data-sound="waves" aria-label="海浪声">
                         <span class="sound-icon">🌊</span>
                         <span class="sound-name">海浪声</span>
@@ -165,6 +180,35 @@
     
     <!-- 旧的加载指示器已移除，现在使用骨架屏系统 -->
     
+    <!-- 隐藏的文件选择器 -->
+    <input type="file" id="audio-file-picker" accept="audio/*" style="display: none;">
+    
+    <!-- 自定义音频菜单 -->
+    <div id="custom-audio-menu" class="custom-audio-menu" style="display: none;">
+        <div class="menu-content">
+            <h3>自定义音效</h3>
+            <p>为 "<span id="menu-sound-name"></span>" 设置自定义音频</p>
+            <div class="menu-buttons">
+                <button id="upload-audio-btn" class="menu-btn primary">
+                    📁 上传音频文件
+                </button>
+                <button id="reset-to-default-btn" class="menu-btn secondary">
+                    🔄 还原默认
+                </button>
+                <button id="cancel-menu-btn" class="menu-btn">
+                    取消
+                </button>
+            </div>
+            <div id="upload-progress" class="upload-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <span class="progress-text">正在上传...</span>
+            </div>
+        </div>
+        <div class="menu-overlay"></div>
+    </div>
+    
     <!-- 错误提示 -->
     <div id="error-message" class="error-message" style="display: none;">
         <p id="error-text"></p>
@@ -172,6 +216,14 @@
     </div>
     
     <!-- JavaScript 模块 -->
+    <script src="js/CampusConfig.js"></script>
+    <script src="js/LocalStorageManager.js"></script>
+    <script src="js/ConfigManager.js"></script>
+    <script src="js/NotificationManager.js"></script>
+    <script src="js/PerformanceOptimizer.js"></script>
+    <script src="js/UniversalAudioManager.js"></script>
+    <script src="js/SoundButtonGenerator.js"></script>
+    <script src="js/ModeManager.js"></script>
     <script src="js/SkeletonManager.js"></script>
     <script src="js/ErrorRecoveryManager.js"></script>
     <script src="js/LoadingOrchestrator.js"></script>

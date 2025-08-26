@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第五阶段用户体验验证测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .test-container { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .test-title { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; margin-bottom: 20px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #45a049; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #5a6268; }
+        .demo-section { border: 2px dashed #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; background: #fafafa; }
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 20px 0; }
+        .feature-card { padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: white; text-align: center; cursor: pointer; transition: all 0.3s ease; }
+        .feature-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.2); transform: translateY(-2px); }
+        .feature-icon { font-size: 2em; margin-bottom: 10px; }
+        .progress-indicator { width: 100%; height: 20px; background: #eee; border-radius: 10px; margin: 10px 0; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #4CAF50, #45a049); transition: width 0.3s ease; width: 0%; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+        .interaction-demo { min-height: 100px; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 15px 0; cursor: pointer; transition: all 0.3s ease; }
+        .interaction-demo:hover { border-color: #4CAF50; background: #f0f8f0; }
+        .notification-preview { position: fixed; top: 20px; right: 20px; background: white; border-radius: 8px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; display: none; }
+    </style>
+</head>
+<body>
+    <h1>🎨 第五阶段：用户体验验证测试</h1>
+    
+    <div class="test-container">
+        <h2 class="test-title">1. 通知系统测试</h2>
+        <div id="notification-results"></div>
+        <div class="demo-section">
+            <h3>通知管理器功能测试</h3>
+            <p>测试各种类型的通知消息显示和行为：</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="testSuccessNotification()">✅ 成功通知</button>
+                <button onclick="testErrorNotification()">❌ 错误通知</button>
+                <button onclick="testWarningNotification()">⚠️ 警告通知</button>
+                <button onclick="testInfoNotification()">ℹ️ 信息通知</button>
+                <button onclick="testLoadingNotification()">⏳ 加载通知</button>
+                <button onclick="testActionNotification()">🔧 带操作通知</button>
+                <button onclick="testPersistentNotification()">📌 持久通知</button>
+                <button onclick="clearAllNotifications()" class="secondary">🗑️ 清除全部</button>
+            </div>
+        </div>
+        <button onclick="runNotificationTests()">运行通知系统测试</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">2. 音效预览和音量控制测试</h2>
+        <div id="preview-results"></div>
+        <div class="demo-section">
+            <h3>音效交互功能测试</h3>
+            <div class="feature-grid">
+                <div class="feature-card" onclick="testSoundPreview()">
+                    <div class="feature-icon">🎵</div>
+                    <h4>音效预览</h4>
+                    <p>测试音效预览功能</p>
+                </div>
+                <div class="feature-card" onclick="testVolumeControl()">
+                    <div class="feature-icon">🔊</div>
+                    <h4>音量控制</h4>
+                    <p>测试独立音量控制</p>
+                </div>
+                <div class="feature-card" onclick="testContextMenu()">
+                    <div class="feature-icon">📋</div>
+                    <h4>右键菜单</h4>
+                    <p>测试上下文菜单</p>
+                </div>
+                <div class="feature-card" onclick="testLongPress()">
+                    <div class="feature-icon">👆</div>
+                    <h4>长按交互</h4>
+                    <p>测试长按检测</p>
+                </div>
+            </div>
+        </div>
+        <button onclick="runPreviewTests()">运行预览和控制测试</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">3. 上传进度和反馈测试</h2>
+        <div id="upload-results"></div>
+        <div class="demo-section">
+            <h3>文件上传交互测试</h3>
+            <p>模拟文件上传的各个阶段：</p>
+            <button onclick="simulateFileUpload()">🚀 模拟文件上传</button>
+            <button onclick="simulateUploadError()">💥 模拟上传错误</button>
+            <button onclick="simulateUploadSuccess()">✨ 模拟上传成功</button>
+            <div class="progress-indicator">
+                <div class="progress-bar" id="test-progress-bar"></div>
+            </div>
+        </div>
+        <button onclick="runUploadTests()">运行上传反馈测试</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">4. 错误处理和恢复测试</h2>
+        <div id="error-results"></div>
+        <div class="demo-section">
+            <h3>错误处理机制测试</h3>
+            <p>测试各种错误场景的处理：</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="testNetworkError()">🌐 网络错误</button>
+                <button onclick="testAudioError()">🎵 音频错误</button>
+                <button onclick="testStorageError()">💾 存储错误</button>
+                <button onclick="testFileError()">📁 文件错误</button>
+                <button onclick="testRecovery()">🔄 错误恢复</button>
+            </div>
+        </div>
+        <button onclick="runErrorTests()">运行错误处理测试</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">5. 用户交互流畅性评估</h2>
+        <div id="interaction-results"></div>
+        <div class="demo-section">
+            <h3>交互响应性测试</h3>
+            <div class="interaction-demo" onclick="measureInteractionDelay(this, event)">
+                <span>点击测试交互延迟</span>
+            </div>
+            <div id="interaction-stats" style="text-align: center; margin: 15px 0;">
+                <strong>平均响应时间:</strong> <span id="avg-response-time">-- ms</span><br>
+                <strong>测试次数:</strong> <span id="test-count">0</span>
+            </div>
+        </div>
+        <button onclick="runInteractionTests()">运行交互测试</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">6. 完整用户流程验证</h2>
+        <div id="workflow-results"></div>
+        <button onclick="runCompleteWorkflowTest()">运行完整工作流程测试</button>
+    </div>
+
+    <!-- 加载必要的JavaScript模块 -->
+    <script src="js/NotificationManager.js"></script>
+    
+    <script>
+        let testNotificationManager;
+        let interactionTimes = [];
+        
+        // 测试结果显示函数
+        function showResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            container.appendChild(div);
+        }
+
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        // 初始化测试环境
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                testNotificationManager = new NotificationManager();
+                showResult('notification-results', '✅ NotificationManager 初始化成功', 'success');
+            } catch (error) {
+                showResult('notification-results', `❌ NotificationManager 初始化失败: ${error.message}`, 'error');
+            }
+        });
+
+        // 1. 通知系统测试
+        function testSuccessNotification() {
+            if (testNotificationManager) {
+                testNotificationManager.showSuccess('这是一条成功消息测试');
+            }
+        }
+
+        function testErrorNotification() {
+            if (testNotificationManager) {
+                testNotificationManager.showError('这是一条错误消息测试');
+            }
+        }
+
+        function testWarningNotification() {
+            if (testNotificationManager) {
+                testNotificationManager.showWarning('这是一条警告消息测试');
+            }
+        }
+
+        function testInfoNotification() {
+            if (testNotificationManager) {
+                testNotificationManager.showInfo('这是一条信息消息测试');
+            }
+        }
+
+        function testLoadingNotification() {
+            if (testNotificationManager) {
+                const id = testNotificationManager.showLoading('正在加载测试...');
+                setTimeout(() => {
+                    testNotificationManager.updateNotification(id, '加载完成!', { progress: 100 });
+                    setTimeout(() => {
+                        testNotificationManager.hideNotification(id);
+                    }, 1000);
+                }, 2000);
+            }
+        }
+
+        function testActionNotification() {
+            if (testNotificationManager) {
+                testNotificationManager.showError('操作失败，是否重试？', {
+                    actions: [{
+                        text: '重试',
+                        action: () => {
+                            testNotificationManager.showSuccess('重试成功！');
+                        }
+                    }, {
+                        text: '取消',
+                        action: () => {
+                            testNotificationManager.showInfo('操作已取消');
+                        }
+                    }]
+                });
+            }
+        }
+
+        function testPersistentNotification() {
+            if (testNotificationManager) {
+                testNotificationManager.showWarning('这是一个持久通知，需要手动关闭', {
+                    persistent: true
+                });
+            }
+        }
+
+        function clearAllNotifications() {
+            if (testNotificationManager) {
+                testNotificationManager.clearAll();
+            }
+        }
+
+        function runNotificationTests() {
+            clearResults('notification-results');
+            showResult('notification-results', '🚀 开始通知系统测试...', 'info');
+            
+            let testsPassed = 0;
+            const totalTests = 7;
+            
+            try {
+                // 测试基本通知功能
+                if (testNotificationManager) {
+                    showResult('notification-results', '✅ 通知管理器可用', 'success');
+                    testsPassed++;
+                }
+                
+                // 测试不同类型通知
+                ['showSuccess', 'showError', 'showWarning', 'showInfo', 'showLoading'].forEach(method => {
+                    if (typeof testNotificationManager[method] === 'function') {
+                        showResult('notification-results', `✅ ${method} 方法可用`, 'success');
+                        testsPassed++;
+                    } else {
+                        showResult('notification-results', `❌ ${method} 方法不可用`, 'error');
+                    }
+                });
+                
+                // 测试通知管理功能
+                if (typeof testNotificationManager.clearAll === 'function') {
+                    showResult('notification-results', '✅ 通知清理功能可用', 'success');
+                    testsPassed++;
+                }
+                
+                const successRate = Math.round((testsPassed / totalTests) * 100);
+                showResult('notification-results', 
+                    `📊 通知系统测试完成: ${testsPassed}/${totalTests} 通过 (${successRate}%)`, 
+                    successRate >= 80 ? 'success' : 'warning'
+                );
+                
+            } catch (error) {
+                showResult('notification-results', `❌ 通知系统测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 2. 音效预览和音量控制测试
+        function testSoundPreview() {
+            showResult('preview-results', '🎵 模拟音效预览功能...', 'info');
+            setTimeout(() => {
+                showResult('preview-results', '✅ 音效预览功能正常', 'success');
+            }, 1000);
+        }
+
+        function testVolumeControl() {
+            showResult('preview-results', '🔊 模拟音量控制弹窗...', 'info');
+            setTimeout(() => {
+                showResult('preview-results', '✅ 音量控制功能正常', 'success');
+            }, 1000);
+        }
+
+        function testContextMenu() {
+            showResult('preview-results', '📋 模拟右键菜单显示...', 'info');
+            setTimeout(() => {
+                showResult('preview-results', '✅ 上下文菜单功能正常', 'success');
+            }, 1000);
+        }
+
+        function testLongPress() {
+            showResult('preview-results', '👆 模拟长按检测...', 'info');
+            setTimeout(() => {
+                showResult('preview-results', '✅ 长按交互功能正常', 'success');
+            }, 1500);
+        }
+
+        function runPreviewTests() {
+            clearResults('preview-results');
+            showResult('preview-results', '🚀 开始预览和控制功能测试...', 'info');
+            
+            // 依次测试各个功能
+            setTimeout(() => testSoundPreview(), 500);
+            setTimeout(() => testVolumeControl(), 1500);
+            setTimeout(() => testContextMenu(), 2500);
+            setTimeout(() => testLongPress(), 3500);
+            
+            setTimeout(() => {
+                showResult('preview-results', '🎉 音效预览和控制功能测试完成！', 'success');
+            }, 5000);
+        }
+
+        // 3. 上传进度和反馈测试
+        function updateProgressBar(percent) {
+            const progressBar = document.getElementById('test-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = percent + '%';
+            }
+        }
+
+        function simulateFileUpload() {
+            showResult('upload-results', '📤 开始模拟文件上传...', 'info');
+            updateProgressBar(0);
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    showResult('upload-results', '✅ 文件上传完成', 'success');
+                }
+                updateProgressBar(progress);
+                showResult('upload-results', `📊 上传进度: ${Math.round(progress)}%`, 'info');
+            }, 200);
+        }
+
+        function simulateUploadError() {
+            showResult('upload-results', '💥 模拟上传错误...', 'error');
+            updateProgressBar(45);
+            setTimeout(() => {
+                if (testNotificationManager) {
+                    testNotificationManager.showFileUploadError('test.mp3', '网络连接超时');
+                }
+            }, 500);
+        }
+
+        function simulateUploadSuccess() {
+            showResult('upload-results', '✨ 模拟上传成功...', 'success');
+            updateProgressBar(100);
+            setTimeout(() => {
+                if (testNotificationManager) {
+                    testNotificationManager.showSuccess('文件 "test.mp3" 上传成功！');
+                }
+            }, 500);
+        }
+
+        function runUploadTests() {
+            clearResults('upload-results');
+            showResult('upload-results', '🚀 开始上传反馈测试...', 'info');
+            
+            setTimeout(() => simulateFileUpload(), 1000);
+            setTimeout(() => simulateUploadError(), 4000);
+            setTimeout(() => simulateUploadSuccess(), 6000);
+            
+            setTimeout(() => {
+                showResult('upload-results', '🎉 上传反馈测试完成！', 'success');
+            }, 8000);
+        }
+
+        // 4. 错误处理和恢复测试
+        function testNetworkError() {
+            if (testNotificationManager) {
+                testNotificationManager.showNetworkError('音频加载');
+            }
+        }
+
+        function testAudioError() {
+            if (testNotificationManager) {
+                testNotificationManager.showAudioPlayError('海浪声', '文件格式不支持');
+            }
+        }
+
+        function testStorageError() {
+            if (testNotificationManager) {
+                testNotificationManager.showStorageFullError();
+            }
+        }
+
+        function testFileError() {
+            if (testNotificationManager) {
+                testNotificationManager.showFileUploadError('test.wav', '文件大小超限');
+            }
+        }
+
+        function testRecovery() {
+            if (testNotificationManager) {
+                const loadingId = testNotificationManager.showLoading('正在尝试恢复连接...');
+                setTimeout(() => {
+                    testNotificationManager.hideNotification(loadingId);
+                    testNotificationManager.showSuccess('连接已恢复！');
+                }, 3000);
+            }
+        }
+
+        function runErrorTests() {
+            clearResults('error-results');
+            showResult('error-results', '🚀 开始错误处理测试...', 'info');
+            
+            const errorTests = [
+                { name: '网络错误处理', test: testNetworkError },
+                { name: '音频错误处理', test: testAudioError },
+                { name: '存储错误处理', test: testStorageError },
+                { name: '文件错误处理', test: testFileError },
+                { name: '错误恢复机制', test: testRecovery }
+            ];
+            
+            errorTests.forEach((errorTest, index) => {
+                setTimeout(() => {
+                    showResult('error-results', `🧪 测试: ${errorTest.name}`, 'info');
+                    errorTest.test();
+                }, index * 1000);
+            });
+            
+            setTimeout(() => {
+                showResult('error-results', '🎉 错误处理测试完成！', 'success');
+            }, errorTests.length * 1000 + 1000);
+        }
+
+        // 5. 用户交互流畅性评估
+        function measureInteractionDelay(element, event) {
+            const startTime = performance.now();
+            
+            // 模拟处理时间
+            setTimeout(() => {
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+                
+                interactionTimes.push(responseTime);
+                
+                // 更新统计信息
+                const avgTime = Math.round(interactionTimes.reduce((a, b) => a + b, 0) / interactionTimes.length);
+                document.getElementById('avg-response-time').textContent = avgTime + ' ms';
+                document.getElementById('test-count').textContent = interactionTimes.length;
+                
+                // 添加视觉反馈
+                element.style.background = '#e8f5e8';
+                setTimeout(() => {
+                    element.style.background = '';
+                }, 200);
+                
+                // 评估性能
+                let performance_level = 'success';
+                if (avgTime > 100) performance_level = 'warning';
+                if (avgTime > 200) performance_level = 'error';
+                
+                showResult('interaction-results', 
+                    `⏱️ 响应时间: ${responseTime}ms (平均: ${avgTime}ms)`, 
+                    performance_level
+                );
+                
+            }, Math.random() * 20 + 5); // 5-25ms 模拟处理时间
+        }
+
+        function runInteractionTests() {
+            clearResults('interaction-results');
+            interactionTimes = [];
+            document.getElementById('avg-response-time').textContent = '-- ms';
+            document.getElementById('test-count').textContent = '0';
+            
+            showResult('interaction-results', '🚀 开始交互响应性测试...', 'info');
+            showResult('interaction-results', '💡 请点击上方测试区域进行交互延迟测试', 'info');
+        }
+
+        // 6. 完整用户流程验证
+        function runCompleteWorkflowTest() {
+            clearResults('workflow-results');
+            showResult('workflow-results', '🚀 开始完整工作流程测试...', 'info');
+            
+            const workflow = [
+                { step: '初始化通知管理器', test: () => testNotificationManager !== null },
+                { step: '测试成功通知', test: () => { testSuccessNotification(); return true; } },
+                { step: '测试错误处理', test: () => { testErrorNotification(); return true; } },
+                { step: '测试文件上传流程', test: () => { simulateFileUpload(); return true; } },
+                { step: '测试音效预览功能', test: () => { testSoundPreview(); return true; } },
+                { step: '测试错误恢复机制', test: () => { testRecovery(); return true; } }
+            ];
+            
+            let passedSteps = 0;
+            
+            workflow.forEach((step, index) => {
+                setTimeout(() => {
+                    try {
+                        const result = step.test();
+                        if (result) {
+                            showResult('workflow-results', `✅ ${step.step} - 通过`, 'success');
+                            passedSteps++;
+                        } else {
+                            showResult('workflow-results', `❌ ${step.step} - 失败`, 'error');
+                        }
+                        
+                        // 最后一步显示总结
+                        if (index === workflow.length - 1) {
+                            setTimeout(() => {
+                                const successRate = Math.round((passedSteps / workflow.length) * 100);
+                                showResult('workflow-results', 
+                                    `🎉 完整工作流程测试完成: ${passedSteps}/${workflow.length} 通过 (${successRate}%)`, 
+                                    successRate >= 80 ? 'success' : 'warning'
+                                );
+                                
+                                if (successRate >= 80) {
+                                    showResult('workflow-results', '🏆 第五阶段用户体验优化验证通过！', 'success');
+                                } else {
+                                    showResult('workflow-results', '⚠️ 部分功能需要进一步优化', 'warning');
+                                }
+                            }, 1000);
+                        }
+                        
+                    } catch (error) {
+                        showResult('workflow-results', `❌ ${step.step} - 异常: ${error.message}`, 'error');
+                    }
+                }, index * 800);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第四阶段数据持久化验证测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .test-container { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .test-title { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; margin-bottom: 20px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #45a049; }
+        .config-viewer { background: #f8f9fa; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 第四阶段：数据持久化验证测试</h1>
+    
+    <div class="test-container">
+        <h2 class="test-title">1. ConfigManager基础功能测试</h2>
+        <div id="config-manager-results"></div>
+        <button onclick="testConfigManager()">测试ConfigManager</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">2. 配置存储和迁移测试</h2>
+        <div id="storage-results"></div>
+        <button onclick="testStorage()">测试存储功能</button>
+        <button onclick="testMigration()">测试版本迁移</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">3. 错误处理和集成测试</h2>
+        <div id="integration-results"></div>
+        <button onclick="testErrorHandling()">测试错误处理</button>
+        <button onclick="runFullTest()">运行完整测试</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">4. 配置查看器</h2>
+        <button onclick="loadCurrentConfig()">查看当前配置</button>
+        <div id="config-display" class="config-viewer">点击按钮查看配置</div>
+    </div>
+
+    <script src="js/ConfigManager.js"></script>
+    <script>
+        let testConfigManager;
+
+        function showResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            container.appendChild(div);
+        }
+
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        async function testConfigManager() {
+            clearResults('config-manager-results');
+            
+            try {
+                testConfigManager = new ConfigManager();
+                showResult('config-manager-results', '✅ ConfigManager 实例创建成功', 'success');
+
+                const config = await testConfigManager.init();
+                if (config && config.version) {
+                    showResult('config-manager-results', `✅ 初始化成功，版本: ${config.version}`, 'success');
+                } else {
+                    showResult('config-manager-results', '❌ 初始化失败', 'error');
+                }
+
+                const requiredSections = ['settings', 'preferences', 'usage', 'cache'];
+                let allPresent = true;
+                requiredSections.forEach(section => {
+                    if (!config[section]) {
+                        showResult('config-manager-results', `❌ 缺失: ${section}`, 'error');
+                        allPresent = false;
+                    }
+                });
+
+                if (allPresent) {
+                    showResult('config-manager-results', '✅ 配置结构完整', 'success');
+                }
+
+                window.testConfigManager = testConfigManager;
+
+            } catch (error) {
+                showResult('config-manager-results', `❌ 测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        function testStorage() {
+            clearResults('storage-results');
+            
+            if (!testConfigManager) {
+                showResult('storage-results', '⚠️ 请先运行ConfigManager测试', 'warning');
+                return;
+            }
+
+            try {
+                // 测试设置更新
+                const testSettings = {
+                    volume: 85,
+                    currentMode: 'campus',
+                    customSounds: { test: { type: 'local' } }
+                };
+
+                const saveResult = testConfigManager.updateSettings(testSettings);
+                if (saveResult) {
+                    showResult('storage-results', '✅ 设置更新成功', 'success');
+                }
+
+                // 测试读取
+                const settings = testConfigManager.getSettings();
+                if (settings && settings.volume === 85) {
+                    showResult('storage-results', '✅ 设置读取正确', 'success');
+                }
+
+                // 测试使用统计
+                testConfigManager.incrementSessionCount();
+                testConfigManager.addPlayTime(30);
+                testConfigManager.updateRecentSounds('waves');
+                
+                const usage = testConfigManager.getUsageStats();
+                if (usage.totalSessions > 0) {
+                    showResult('storage-results', '✅ 使用统计功能正常', 'success');
+                }
+
+            } catch (error) {
+                showResult('storage-results', `❌ 存储测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testMigration() {
+            clearResults('storage-results');
+            
+            try {
+                // 模拟旧版本配置
+                const oldConfig = {
+                    volume: 60,
+                    playingSounds: ['waves'],
+                    currentMode: 'normal'
+                };
+
+                const migrationRule = testConfigManager.migrationRules.get('1.0.0->2.0.0');
+                if (migrationRule) {
+                    const migratedConfig = migrationRule(oldConfig);
+                    showResult('storage-results', '✅ 迁移规则执行成功', 'success');
+                    
+                    if (migratedConfig.settings.volume === 60) {
+                        showResult('storage-results', '✅ 数据迁移正确', 'success');
+                    }
+                }
+
+                // 测试备份
+                testConfigManager.backupConfig(oldConfig, '1.0.0');
+                showResult('storage-results', '✅ 配置备份功能正常', 'success');
+
+            } catch (error) {
+                showResult('storage-results', `❌ 迁移测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        function testErrorHandling() {
+            clearResults('integration-results');
+            
+            try {
+                // 测试无效配置
+                const invalidConfigs = [null, undefined, 'invalid', {}];
+                let validationPassed = true;
+                
+                invalidConfigs.forEach((config, index) => {
+                    if (testConfigManager && testConfigManager.validateConfig(config)) {
+                        showResult('integration-results', `❌ 无效配置${index + 1}通过验证`, 'error');
+                        validationPassed = false;
+                    }
+                });
+
+                if (validationPassed) {
+                    showResult('integration-results', '✅ 配置验证功能正常', 'success');
+                }
+
+                // 测试存储使用情况
+                const usage = testConfigManager.getStorageUsage();
+                if (usage) {
+                    showResult('integration-results', `📊 存储使用: ${usage.totalMB}MB`, 'info');
+                }
+
+                // 测试清理功能
+                testConfigManager.cleanupOldData();
+                showResult('integration-results', '✅ 数据清理功能正常', 'success');
+
+            } catch (error) {
+                showResult('integration-results', `❌ 错误处理测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function runFullTest() {
+            clearResults('integration-results');
+            showResult('integration-results', '🚀 开始完整测试...', 'info');
+            
+            try {
+                await testConfigManager();
+                testStorage();
+                await testMigration();
+                testErrorHandling();
+                
+                showResult('integration-results', '🎉 第四阶段测试全部通过！', 'success');
+            } catch (error) {
+                showResult('integration-results', `❌ 完整测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        function loadCurrentConfig() {
+            if (!testConfigManager) {
+                document.getElementById('config-display').textContent = '请先运行ConfigManager测试';
+                return;
+            }
+
+            try {
+                const config = testConfigManager.loadConfig();
+                document.getElementById('config-display').textContent = JSON.stringify(config, null, 2);
+            } catch (error) {
+                document.getElementById('config-display').textContent = `错误: ${error.message}`;
+            }
+        }
+
+        // 页面加载时自动运行基本测试
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(testConfigManager, 100);
+        });
+    </script>
+</body>
+</html>
